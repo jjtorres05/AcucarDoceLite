@@ -3,6 +3,7 @@ import Login from './screens/Login'
 import Register from './screens/Register'
 import SelectCompany from './screens/SelectCompany'
 import Devices from './screens/Devices'
+import Sensors from './screens/Sensors'
 import DashboardLayout from './layouts/DashboardLayout'
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
       <Route path="/empresas" element={<SelectCompany />} />
       <Route element={<DashboardLayout />}>
         <Route path="/dispositivos" element={<Devices />} />
+        <Route path="/sensores" element={<Sensors />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

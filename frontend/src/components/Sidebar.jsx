@@ -21,7 +21,7 @@ function SidebarLink({ item }) {
       className={({ isActive }) =>
         `flex items-center justify-center w-10 h-10 rounded-lg transition ${
           isActive
-            ? 'bg-gold-500 text-white'
+            ? 'bg-gold-500/20 text-white'
             : 'text-gray-400 hover:text-white hover:bg-navy-700'
         }`
       }

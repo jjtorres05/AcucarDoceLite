@@ -1,9 +1,9 @@
 export function DataTable({ columns, children }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden">
       <table className="w-full">
         <thead>
-          <tr className="bg-gold-500/20 border-b border-gold-200">
+          <tr className="bg-gold-500 border-b border-gold-200">
             {columns.map((col) => (
               <th
                 key={col.key}
