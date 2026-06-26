@@ -13,6 +13,11 @@ export async function getCompanies(){
     return data.data
 }
 
+export function logout(){
+    localStorage.removeItem('token')
+    localStorage.removeItem('companyId')
+}
+
 export function getToken(){
     return localStorage.getItem('token')
 }
