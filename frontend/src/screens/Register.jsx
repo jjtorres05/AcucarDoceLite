@@ -4,7 +4,7 @@ import Logo from '../components/Logo'
 import Input from '../components/Input'
 import PasswordInput from '../components/PasswordInput'
 import Button from '../components/Button'
-import iotIllustration from '../assets/ChatGPT Image 15 jun 2026, 01_49_15 p.m..png'
+import iotIllustration from '../assets/15 junio.png'
 
 export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
@@ -17,7 +17,7 @@ export default function Register() {
 
   return (
     <div className="flex min-h-screen">
-      <div className="hidden lg:flex lg:w-1/2 bg-navy-900 flex-col justify-between p-10">
+      <div className="hidden lg:flex lg:w-1/2 bg-navy-900 flex-col justify-between p-10 pt-16">
         <Logo size="lg" />
 
         <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
@@ -31,7 +31,7 @@ export default function Register() {
           </p>
         </div>
 
-        <div className="bg-navy-800 rounded-xl p-6 flex items-center gap-6 border border-navy-700">
+        <div className="bg-navy-800 rounded-xl p-6 flex items-center justify-around gap-8 border border-navy-700">
           <div className="text-center">
             <span className="text-gold-500 text-3xl font-bold">+100</span>
             <p className="text-white text-sm mt-1">empresas</p>
