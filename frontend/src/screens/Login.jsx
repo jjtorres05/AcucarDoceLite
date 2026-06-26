@@ -50,7 +50,7 @@ export default function Login() {
           </div>
 
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-navy-900">Bem vindo de volta</h1>
+            <h1 className="text-2xl font-semibold text-navy-900">Bem-vindo de volta</h1>
             <p className="text-gray-500 text-sm mt-1">Entre com suas credenciais para acessar o sistema</p>
           </div>
 
@@ -76,9 +76,9 @@ export default function Login() {
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            Nao tem conta?{' '}
+            Não tem conta?{' '}
             <Link to="/cadastro" className="text-gold-500 hover:text-gold-400 font-medium">
-              Registrese
+              Registre-se
             </Link>
           </p>
         </div>

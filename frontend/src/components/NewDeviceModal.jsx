@@ -40,8 +40,8 @@ export default function NewDeviceModal({ onClose }) {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Exp: Sensor De Humidade, Armazem-C"
-            hint="O Nome Desse Dispositivo Deve Ser Unico."
+            placeholder="Exp: Sensor De Humidade, Armazém-C"
+            hint="O nome desse dispositivo deve ser único."
           />
 
           <Input
@@ -67,7 +67,7 @@ export default function NewDeviceModal({ onClose }) {
           <div className="mx-5 mb-5 border border-gray-200 rounded-xl overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 flex items-center gap-2 border-b border-gray-200">
               <Key size={16} className="text-navy-900" />
-              <span className="font-semibold text-sm text-navy-900">Token de autenticacao</span>
+              <span className="font-semibold text-sm text-navy-900">Token de autenticação</span>
             </div>
             <div className="p-4">
               <div className="flex items-center gap-2">
@@ -76,12 +76,12 @@ export default function NewDeviceModal({ onClose }) {
                   {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-1">O Nome Desse Dispositivo Deve Ser Unico</p>
+              <p className="text-xs text-gray-400 mt-1">O nome desse dispositivo deve ser único.</p>
             </div>
             <div className="mx-4 mb-4 flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
               <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
               <p className="text-xs text-blue-600">
-                O Token Sera Exibido Uma Unica Vez Apos O Cadastro. Guarde-O Em Um Lugar Seguro — Ele Sera Usado Pelo Dispositivo Fisico Para Se Autenticar Na Plataforma.
+                O token será exibido uma única vez após o cadastro. Guarde-o em um lugar seguro — ele será usado pelo dispositivo físico para se autenticar na plataforma.
               </p>
             </div>
           </div>

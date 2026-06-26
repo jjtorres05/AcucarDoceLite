@@ -6,12 +6,12 @@ const navItems = [
   { icon: LayoutDashboard, to: '/dashboard', label: 'Dashboard' },
   { icon: Cpu, to: '/dispositivos', label: 'Dispositivos' },
   { icon: Activity, to: '/sensores', label: 'Sensores' },
-  { icon: BarChart3, to: '/relatorios', label: 'Relatorios' },
+  { icon: BarChart3, to: '/relatorios', label: 'Relatórios' },
 ]
 
 const bottomItems = [
   { icon: Search, to: '/buscar', label: 'Buscar' },
-  { icon: Settings, to: '/configuracoes', label: 'Configuracoes' },
+  { icon: Settings, to: '/configuracoes', label: 'Configurações' },
 ]
 
 function SidebarLink({ item }) {

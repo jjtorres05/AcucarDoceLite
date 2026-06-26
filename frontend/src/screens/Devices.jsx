@@ -20,7 +20,7 @@ const columns = [
   { key: 'sensors', label: 'Sensores' },
   { key: 'actuators', label: 'Atuadores' },
   { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Acoes', center: true },
+  { key: 'actions', label: 'Ações', center: true },
 ]
 
 function SensorDots({ device }) {

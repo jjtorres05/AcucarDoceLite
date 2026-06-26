@@ -22,7 +22,7 @@ export function DataTable({ columns, children }) {
 
 export function DataRow({ children }) {
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+    <tr className="border-b border-gray-100 hover:bg-gold-100/50 transition">
       {children}
     </tr>
   )

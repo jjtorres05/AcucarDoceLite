@@ -4,19 +4,27 @@ import Button from '../components/Button'
 import Input from '../components/Input'
 import StatusBadge from '../components/StatusBadge'
 import StatCard from '../components/StatCard'
+import SensorTypeBadge from '../components/SensorTypeBadge'
+import ReadingBar from '../components/ReadingBar'
 import { DataTable, DataRow, DataCell } from '../components/DataTable'
 import Pagination from '../components/Pagination'
+import NewSensorModal from '../components/NewSensorModal'
 
 const sensors = [
-  { id: 1, name: 'Sensor temperatura - Sala B', model: 'ESPN-32', actuators: { total: 4, active: 4 }, status: 'Ativo' },
-  { id: 2, name: 'Sensor de luz - cultivo arroz', model: 'ESPN-33', actuators: { total: 4, active: 1, warning: 2 }, status: 'Ativo' },
-  { id: 3, name: 'Sensor PH - cultivo batata', model: 'ESPN-34', actuators: { total: 5, warning: 2, critical: 3 }, status: 'Inativo' },
-  { id: 4, name: 'Sensor Humidade - Armazem A', model: 'ESPN-35', actuators: { total: 2, offline: 2 }, status: 'Ativo' },
+  { id: 1, name: 'Sensor temperatura - Sala B', model: 'ESPN-32', type: 'Temperatura', device: 'ESPN-32 Sala B', reading: { value: 24, min: 0, max: 50, unit: '°C', ago: 2 }, actuators: { total: 4, active: 4 }, status: 'Ativo' },
+  { id: 2, name: 'Sensor de luz - cultivo arroz', model: 'ESPN-33', type: 'Luminosidade', device: 'ESPN-33 Cultivo Arroz', reading: { value: 850, min: 0, max: 1000, unit: ' lux', ago: 15 }, actuators: { total: 4, active: 1, warning: 2 }, status: 'Ativo' },
+  { id: 3, name: 'Sensor PH - cultivo batata', model: 'ESPN-34', type: 'PH', device: 'ESPN-34 Cultivo Batata', reading: { value: 6.5, min: 0, max: 14, unit: '', ago: 120 }, actuators: { total: 5, warning: 2, critical: 3 }, status: 'Inativo' },
+  { id: 4, name: 'Sensor Humidade - Armazem A', model: 'ESPN-35', type: 'Humidade', device: 'ESPN-35 Armazem A', reading: { value: 78, min: 0, max: 100, unit: '%', ago: 45 }, actuators: { total: 2, offline: 2 }, status: 'Ativo' },
 ]
 
 const columns = [
   { key: 'name', label: 'Nome / Modelo' },
   { key: 'actuators', label: 'Atuadores' },
+  { key: 'type', label: 'Tipo' },
+  { key: 'device', label: "Dispositivos"},
+  { key: 'status', label: 'Status' },
+  { key: 'reading', label: 'Leituras' },
+  { key: 'actions', label: 'Ações', center: true },
 ]
 
 function ActuatorDots({ actuators }) {
@@ -47,6 +55,7 @@ export default function Sensors() {
   const [showFilter, setShowFilter] = useState(false)
   const [showSort, setShowSort] = useState(false)
   const [page, setPage] = useState(1)
+  const [showModal, setShowModal] = useState(false)
 
   const filtered = sensors.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase())
@@ -60,7 +69,7 @@ export default function Sensors() {
             icon="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Procure Um Dispositivo Pelo Nome"
+            placeholder="Procure Um Sensor Pelo Nome"
             className="w-80"
           />
           <Button variant="gold" size="sm" onClick={() => setShowFilter(!showFilter)}>
@@ -74,7 +83,7 @@ export default function Sensors() {
             {showSort && <X size={12} />}
           </Button>
         </div>
-        <Button>
+        <Button onClick={() => setShowModal(true)}>
           <Plus size={16} />
           Criar Sensor
         </Button>
@@ -100,7 +109,7 @@ export default function Sensors() {
         />
         <StatCard
           icon={<TriangleAlert size={24} className="text-red-500" />}
-          label="Em atencao"
+          label="Em atenção"
           value="1"
           color="text-red-600"
         />
@@ -127,11 +136,33 @@ export default function Sensors() {
               <p className="text-sm text-navy-900">{sensor.actuators.total} atuadores</p>
               <ActuatorDots actuators={sensor.actuators} />
             </DataCell>
+            <DataCell>
+              <SensorTypeBadge type={sensor.type} />
+            </DataCell>
+            <DataCell>
+              <p className="text-sm text-navy-900">{sensor.device}</p>
+            </DataCell>
+            <DataCell>
+              <ReadingBar value={sensor.reading.value} min={sensor.reading.min} max={sensor.reading.max} unit={sensor.reading.unit} ago={sensor.reading.ago} />
+            </DataCell>
+            <DataCell>
+              <StatusBadge status={sensor.status} />
+            </DataCell>
+            <DataCell center>
+              <div className="flex items-center justify-center gap-1">
+                <Button variant="ghost" size="icon" title="Ver"><Eye size={16} /></Button>
+                <Button variant="ghost" size="icon" title="Editar"><Edit size={16} /></Button>
+                <Button variant="danger" size="icon" title="Ligar/Desligar"><Power size={16} /></Button>
+                <Button variant="danger" size="icon" title="Excluir"><Trash2 size={16} /></Button>
+              </div>
+            </DataCell>
           </DataRow>
         ))}
       </DataTable>
 
       <Pagination total={3} current={page} onPageChange={setPage} />
+
+      {showModal && <NewSensorModal onClose={() => setShowModal(false)} />}
     </div>
   )
 }

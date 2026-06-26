@@ -5,12 +5,12 @@ const titles = {
   '/dispositivos': 'Dispositivos',
   '/sensores': 'Sensores',
   '/dashboard': 'Dashboard',
-  '/relatorios': 'Relatorios',
+  '/relatorios': 'Relatórios',
   '/buscar': 'Buscar',
-  '/configuracoes': 'Configuracoes',
+  '/configuracoes': 'Configurações',
 }
 
-export default function TopBar({ companyName = 'Usina De Cambe' }) {
+export default function TopBar({ companyName = 'Usina De Cambé' }) {
   const { pathname } = useLocation()
   const title = titles[pathname] || 'Dashboard'
 
