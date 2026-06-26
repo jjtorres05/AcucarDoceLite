@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Cpu, Activity, BarChart3, Search, Settings } from 'lucide-react'
+import { LayoutDashboard, Cpu, Activity, CircleDot, BarChart3, Search, Settings } from 'lucide-react'
 import logoImg from '../assets/acucardoce_logo_png_transparente_para_fondo_azul_600.png'
 
 const navItems = [
   { icon: LayoutDashboard, to: '/dashboard', label: 'Dashboard' },
   { icon: Cpu, to: '/dispositivos', label: 'Dispositivos' },
   { icon: Activity, to: '/sensores', label: 'Sensores' },
+  { icon: CircleDot, to: '/atuadores', label: 'Atuadores' },
   { icon: BarChart3, to: '/relatorios', label: 'Relatórios' },
 ]
 

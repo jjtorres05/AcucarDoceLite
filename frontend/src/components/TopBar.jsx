@@ -4,6 +4,7 @@ import { Cpu } from 'lucide-react'
 const titles = {
   '/dispositivos': 'Dispositivos',
   '/sensores': 'Sensores',
+  '/atuadores': 'Atuadores',
   '/dashboard': 'Dashboard',
   '/relatorios': 'Relatórios',
   '/buscar': 'Buscar',

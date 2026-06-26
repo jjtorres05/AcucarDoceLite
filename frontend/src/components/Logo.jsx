@@ -1,4 +1,4 @@
-import logoImg from '../assets/acucardoce_logo_png_transparente_para_fondo_azul_600.png'
+import logoImg from '../assets/ChatGPT Image 26 jun 2026, 11_09_27 a.m.png'
 
 export default function Logo({ className = '', size = 'md' }) {
   const heights = {

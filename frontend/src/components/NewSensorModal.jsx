@@ -1,7 +1,15 @@
 import { useState } from 'react'
-import { X, Plus, Activity, Thermometer, Droplets, Sun, Waves, Settings2, ChevronDown } from 'lucide-react'
+import { X, Plus, Activity, Thermometer, Droplets, Sun, Waves, Settings2, ChevronDown, Cpu } from 'lucide-react'
 import Button from './Button'
 import Input from './Input'
+import CustomSelect from './CustomSelect'
+
+const deviceOptions = [
+  { value: 'espn-32', label: 'Caldeira-A', sub: 'ESPN-32 · 4 sensores ativos', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
+  { value: 'espn-33', label: 'Armazém-A', sub: 'ESPN-33 · 3 sensores ativos', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
+  { value: 'espn-34', label: 'Caldeira-B', sub: 'ESPN-34 · 8 sensores ativos', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
+  { value: 'espn-35', label: 'Armazém-B', sub: 'ESPN-35 · 2 sensores', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Inativo', badgeClass: 'bg-red-100 text-red-700' },
+]
 
 const sensorTypes = [
   { key: 'temperatura', label: 'temperatura', icon: Thermometer },
@@ -173,26 +181,15 @@ export default function NewSensorModal({ onClose }) {
         </div>
 
         <form onSubmit={handleCreate} className="p-5 space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              <span className="text-red-500">* </span>Dispositivo
-            </label>
-            <div className="relative">
-              <select
-                value={device}
-                onChange={(e) => setDevice(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition appearance-none bg-white cursor-pointer"
-              >
-                <option value="">Selecionar Um Dispositivo</option>
-                <option value="espn-32">ESPN-32 Sala B</option>
-                <option value="espn-33">ESPN-33 Cultivo Arroz</option>
-                <option value="espn-34">ESPN-34 Cultivo Batata</option>
-                <option value="espn-35">ESPN-35 Armazem A</option>
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">O sensor será vinculado a esse dispositivo.</p>
-          </div>
+          <CustomSelect
+            label="Dispositivo"
+            required
+            placeholder="Selecionar um dispositivo"
+            value={device}
+            onChange={setDevice}
+            options={deviceOptions}
+            hint="O sensor será vinculado a esse dispositivo."
+          />
 
           <Input
             label="Nome"
