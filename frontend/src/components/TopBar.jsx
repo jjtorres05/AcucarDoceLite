@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Cpu } from 'lucide-react'
+import { Building2, Cpu } from 'lucide-react'
 
 const titles = {
   '/dispositivos': 'Dispositivos',
@@ -23,7 +23,7 @@ export default function TopBar({ companyName = 'Usina De Cambé' }) {
           {companyName}
         </div>
         <div className="w-8 h-8 bg-gold-500 rounded-lg flex items-center justify-center">
-          <Cpu size={16} className="text-white" />
+          <Building2 size={16} className="text-white" />
         </div>
       </div>
     </header>

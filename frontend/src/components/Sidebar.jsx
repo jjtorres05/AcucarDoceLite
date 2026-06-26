@@ -1,17 +1,17 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Cpu, Activity, CircleDot, BarChart3, Search, Settings } from 'lucide-react'
-import logoImg from '../assets/acucardoce_logo_png_transparente_para_fondo_azul_600.png'
+import { LayoutDashboard, Cpu, Activity, CircleDot, BarChart3, Search, Settings, Airplay, SatelliteDish, Router, ToggleRight, User } from 'lucide-react'
+import logoImg from '../assets/favicon.svg'
 
 const navItems = [
   { icon: LayoutDashboard, to: '/dashboard', label: 'Dashboard' },
-  { icon: Cpu, to: '/dispositivos', label: 'Dispositivos' },
-  { icon: Activity, to: '/sensores', label: 'Sensores' },
-  { icon: CircleDot, to: '/atuadores', label: 'Atuadores' },
+  { icon: Router, to: '/dispositivos', label: 'Dispositivos' },
+  { icon: SatelliteDish, to: '/sensores', label: 'Sensores' },
+  { icon: ToggleRight, to: '/atuadores', label: 'Atuadores' },
   { icon: BarChart3, to: '/relatorios', label: 'Relatórios' },
 ]
 
 const bottomItems = [
-  { icon: Search, to: '/buscar', label: 'Buscar' },
+  { icon: User, to: '/buscar', label: 'Buscar' },
   { icon: Settings, to: '/configuracoes', label: 'Configurações' },
 ]
 
