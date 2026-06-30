@@ -1,4 +1,3 @@
-import { jsx } from "react/jsx-runtime";
 import { api } from "./api";
 
 export async function getMachines(){
@@ -18,9 +17,9 @@ export async function createMachine(nome, modelo){
 
 export async function updateMachine(machineId, updates){
     const companyId = localStorage.getItem('companyId')
-    const data = await api(`/machineCRUD?machine=${machineId}&companyId=${companyId}`,{
+    const data = await api(`/machineCRUD?machineId=${machineId}&companyId=${companyId}`,{
         method: 'PATCH',
-        body: JSON.stringify(upadates),
+        body: JSON.stringify(updates),
     })
     return data.data
 }

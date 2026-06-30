@@ -4,7 +4,7 @@ export async function api(endpoint,options= {}) {
     const token= localStorage.getItem('token')
     const config={
         headers :{
-            'Content-Type':'applicatio/json', ...(token && {Authorization: `Bearer ${token}`}),
+            'Content-Type':'application/json', ...(token && {Authorization: `Bearer ${token}`}),
         },
         ...options,
     }

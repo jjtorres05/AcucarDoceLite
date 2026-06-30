@@ -1,17 +1,39 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import Input from '../components/Input'
 import PasswordInput from '../components/PasswordInput'
 import Button from '../components/Button'
+import { login, getCompanies } from '../services/auth'
 import iotIllustration from '../assets/15 junio.png'
 
-export default function Login() {
+export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      await login(email, password)
+      const companies = await getCompanies()
+
+      if (companies.length === 1) {
+        onLogin(companies[0].id)
+        navigate('/dispositivos')
+      } else {
+        navigate('/empresas', { state: { companies } })
+      }
+    } catch (err) {
+      setError(err.error?.message || 'Email ou senha incorretos')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -54,6 +76,12 @@ export default function Login() {
             <p className="text-gray-500 text-sm mt-1">Entre com suas credenciais para acessar o sistema</p>
           </div>
 
+          {error && (
+            <div className='bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg mb-4'>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
               label="Email"
@@ -70,8 +98,8 @@ export default function Login() {
               placeholder="&bull;&bull;&bull;&bull;&bull;"
             />
 
-            <Button type="submit" variant="gold" className="w-full">
-              Entrar
+            <Button type="submit" variant="gold" className="w-full" disabled={loading}>
+              {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
 
@@ -85,4 +113,4 @@ export default function Login() {
       </div>
     </div>
   )
-}
+
