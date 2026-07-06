@@ -24,8 +24,8 @@ export default function Login({ onLogin }) {
       const companies = await getCompanies()
 
       if (companies.length === 1) {
-        onLogin(companies[0].id)
-        navigate('/dispositivos')
+        onLogin(companies[0].company.id, companies[0].company.name, companies[0].roleCompany)
+        navigate('/dashboard')
       } else {
         navigate('/empresas', { state: { companies } })
       }
@@ -113,4 +113,4 @@ export default function Login({ onLogin }) {
       </div>
     </div>
   )
-
+}

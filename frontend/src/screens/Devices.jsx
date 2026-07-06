@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Plus, Filter, ArrowUpDown, Eye, Edit, Trash2, X } from 'lucide-react'
+import { Plus, Filter, ArrowUpDown, Edit, Power, Trash2, X } from 'lucide-react'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import StatusBadge from '../components/StatusBadge'
 import { DataTable, DataRow, DataCell } from '../components/DataTable'
 import Pagination from '../components/Pagination'
 import NewDeviceModal from '../components/NewDeviceModal'
-import { getMachines, deleteMachine } from '../services/machines'
+import EditDeviceModal from '../components/EditDeviceModal'
+import { getMachines, deleteMachine, updateMachine } from '../services/machines'
+import { isAdmin } from '../services/auth'
 
-const columns = [
+const baseColumns = [
   { key: 'name', label: 'Nome / Modelo' },
   { key: 'sensors', label: 'Sensores' },
   { key: 'actuators', label: 'Atuadores' },
   { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Ações', center: true },
 ]
 
 export default function Devices() {
@@ -21,10 +22,12 @@ export default function Devices() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   const [showSort, setShowSort] = useState(false)
   const [page, setPage] = useState(1)
+  const admin = isAdmin()
 
   const fetchDevices = async () => {
     try {
@@ -42,6 +45,15 @@ export default function Devices() {
     fetchDevices()
   }, [])
 
+  const handleToggle = async (device) => {
+    try {
+      await updateMachine(device.id, { active: !device.active })
+      fetchDevices()
+    } catch (err) {
+      setError('Erro ao alterar status do dispositivo')
+    }
+  }
+
   const handleDelete = async (id) => {
     if (!window.confirm('Tem certeza que deseja excluir?')) return
     try {
@@ -53,7 +65,7 @@ export default function Devices() {
   }
 
   const filtered = devices.filter((d) =>
-    d.nome.toLowerCase().includes(search.toLowerCase())
+    d.name.toLowerCase().includes(search.toLowerCase())
   )
 
   if (loading) return <p className="text-center py-8 text-gray-500">Carregando...</p>
@@ -81,21 +93,23 @@ export default function Devices() {
             {showSort && <X size={12} />}
           </Button>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus size={16} />
-          Criar Dispositivo
-        </Button>
+        {admin && (
+          <Button onClick={() => setShowModal(true)}>
+            <Plus size={16} />
+            Criar Dispositivo
+          </Button>
+        )}
       </div>
 
-      <DataTable columns={columns}>
+      <DataTable columns={admin ? [...baseColumns, { key: 'actions', label: 'Ações', center: true }] : baseColumns}>
         {filtered.map((device) => (
           <DataRow key={device.id}>
             <DataCell>
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${device.active ? 'bg-green-500' : 'bg-gray-400'}`} />
                 <div>
-                  <p className="font-medium text-navy-900 text-sm">{device.nome}</p>
-                  <p className="text-xs text-gray-400">{device.modelo}</p>
+                  <p className="font-medium text-navy-900 text-sm">{device.name}</p>
+                  <p className="text-xs text-gray-400">{device.model}</p>
                 </div>
               </div>
             </DataCell>
@@ -118,15 +132,19 @@ export default function Devices() {
             <DataCell>
               <StatusBadge status={device.active ? 'Ativo' : 'Inativo'} />
             </DataCell>
-            <DataCell center>
-              <div className="flex items-center justify-center gap-1">
-                <Button variant="ghost" size="icon" title="Ver"><Eye size={16} /></Button>
-                <Button variant="ghost" size="icon" title="Editar"><Edit size={16} /></Button>
-                <Button variant="danger" size="icon" title="Excluir" onClick={() => handleDelete(device.id)}>
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-            </DataCell>
+            {admin && (
+              <DataCell center>
+                <div className="flex items-center justify-center gap-1">
+                  <Button variant="ghost" size="icon" title="Editar" onClick={() => setEditing(device)}><Edit size={16} /></Button>
+                  <Button variant="danger" size="icon" title="Ligar/Desligar" onClick={() => handleToggle(device)}>
+                    <Power size={16} />
+                  </Button>
+                  <Button variant="danger" size="icon" title="Excluir" onClick={() => handleDelete(device.id)}>
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </DataCell>
+            )}
           </DataRow>
         ))}
       </DataTable>
@@ -134,6 +152,7 @@ export default function Devices() {
       <Pagination total={Math.ceil(filtered.length / 5) || 1} current={page} onPageChange={setPage} />
 
       {showModal && <NewDeviceModal onClose={() => setShowModal(false)} onCreated={fetchDevices} />}
+      {editing && <EditDeviceModal device={editing} onClose={() => setEditing(null)} onUpdated={fetchDevices} />}
     </div>
   )
 }

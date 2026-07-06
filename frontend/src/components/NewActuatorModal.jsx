@@ -1,41 +1,62 @@
-import { useState } from 'react'
-import { X, Plus, CircleDot, DoorOpen, Droplets, Settings2, Fan, Waves, Info, Cpu, Activity, Thermometer } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Plus, CircleDot, Info, Cpu, Activity, SatelliteDish, Router } from 'lucide-react'
 import Button from './Button'
 import Input from './Input'
 import CustomSelect from './CustomSelect'
+import { createActuator } from '../services/actuators'
+import { getMachines } from '../services/machines'
+import { getSensors } from '../services/sensors'
 
-const actuatorTypes = [
-  { key: 'porta', label: 'Porta', icon: DoorOpen },
-  { key: 'irrigador', label: 'Irrigador', icon: Droplets },
-  { key: 'motor', label: 'Motor', icon: Settings2 },
-  { key: 'ventilador', label: 'Ventilador', icon: Fan },
-  { key: 'outro', label: 'Outro', icon: Waves },
-]
-
-const deviceOptions = [
-  { value: 'caldeira-a', label: 'Caldeira-A', sub: 'ESPN-32 · 4 sensores', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
-  { value: 'armazem-a', label: 'Armazém-A', sub: 'ESPN-33 · 3 sensores', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
-  { value: 'caldeira-b', label: 'Caldeira-B', sub: 'ESPN-34 · 8 sensores', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
-  { value: 'armazem-b', label: 'Armazém-B', sub: 'ESPN-35 · 2 sensores', icon: <Cpu size={14} className="text-navy-900" />, iconBg: 'bg-blue-50', badge: 'Inativo', badgeClass: 'bg-red-100 text-red-700' },
-]
-
-const sensorOptions = [
-  { value: 'temp-sala-b', label: 'Sensor temperatura - Sala B', sub: 'Temperatura · 24°C', icon: <Thermometer size={14} className="text-red-500" />, iconBg: 'bg-red-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
-  { value: 'luz-arroz', label: 'Sensor de luz - cultivo arroz', sub: 'Luminosidade · 850 lux', icon: <Activity size={14} className="text-yellow-500" />, iconBg: 'bg-yellow-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
-  { value: 'ph-batata', label: 'Sensor PH - cultivo batata', sub: 'PH · 6.5', icon: <Activity size={14} className="text-purple-500" />, iconBg: 'bg-purple-50', badge: 'Inativo', badgeClass: 'bg-red-100 text-red-700' },
-  { value: 'hum-armazem', label: 'Sensor Humidade - Armazém A', sub: 'Humidade · 78%', icon: <Droplets size={14} className="text-blue-500" />, iconBg: 'bg-blue-50', badge: 'Ativo', badgeClass: 'bg-green-100 text-green-700' },
-]
-
-export default function NewActuatorModal({ onClose }) {
+export default function NewActuatorModal({ onClose, onCreated }) {
+  const [machines, setMachines] = useState([])
+  const [sensors, setSensors] = useState([])
   const [device, setDevice] = useState('')
   const [name, setName] = useState('')
-  const [type, setType] = useState('')
+  const [model, setModel] = useState('')
   const [sensor, setSensor] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleCreate = (e) => {
+  useEffect(() => {
+    getMachines().then(setMachines).catch(() => {})
+    getSensors().then(setSensors).catch(() => {})
+  }, [])
+
+  const deviceOptions = machines.map(m => ({
+    value: m.id,
+    label: m.name,
+    sub: m.model,
+    icon: <Router size={14} className="text-navy-900" />,
+    iconBg: 'bg-blue-50',
+    badge: m.active ? 'Ativo' : 'Inativo',
+    badgeClass: m.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
+  }))
+
+  const sensorOptions = sensors.map(s => ({
+    value: s.sensorId,
+    label: s.sensorName,
+    sub: `${s.sensorModel} · ${s.machineName}`,
+    icon: <SatelliteDish size={14} className="text-blue-500" />,
+    iconBg: 'bg-blue-50',
+    badge: s.sensorStatus ? 'Ativo' : 'Inativo',
+    badgeClass: s.sensorStatus ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
+  }))
+
+  const handleCreate = async (e) => {
     e.preventDefault()
-    if (name && type && device) {
+    if (!name || !model || !device) return
+    try {
+      setLoading(true)
+      setError('')
+      const body = { name, model, machineId: device }
+      if (sensor) body.sensorId = sensor
+      await createActuator(body)
+      onCreated?.()
       onClose()
+    } catch (err) {
+      setError(err.message || 'Erro ao criar atuador')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -68,40 +89,20 @@ export default function NewActuatorModal({ onClose }) {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Exp: Temp Caldeira, Umidade Armazém"
+            placeholder="Exp: Válvula de água, Ventilador"
           />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              <span className="text-red-500">* </span>Tipo
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {actuatorTypes.map((t) => {
-                const Icon = t.icon
-                const isSelected = type === t.key
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => setType(t.key)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition cursor-pointer ${
-                      isSelected
-                        ? 'border-gold-500 bg-gold-100 text-gold-500 font-medium'
-                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    <Icon size={14} />
-                    {t.label}
-                  </button>
-                )
-              })}
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Selecione para preencher tipo e unidade automaticamente.</p>
-          </div>
+          <Input
+            label="Modelo"
+            required
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="Exp: Irrigador, Motor DC"
+          />
 
           <CustomSelect
             label="Sensor"
-            placeholder="Selecionar um sensor"
+            placeholder="Selecionar um sensor (opcional)"
             value={sensor}
             onChange={setSensor}
             options={sensorOptions}
@@ -111,17 +112,19 @@ export default function NewActuatorModal({ onClose }) {
           <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
             <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
             <p className="text-xs text-blue-600">
-              Somente sensores do mesmo dispositivo aparecem na lista. Um sensor pode controlar vários atuadores, mas cada atuador só pode ter um sensor de controle.
+              Um sensor pode controlar vários atuadores, mas cada atuador só pode ter um sensor de controle.
             </p>
           </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
           <div className="flex justify-center gap-3 pt-2">
             <Button type="button" variant="muted" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={loading}>
               <Plus size={14} />
-              Criar
+              {loading ? 'Criando...' : 'Criar'}
             </Button>
           </div>
         </form>

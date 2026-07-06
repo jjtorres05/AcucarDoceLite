@@ -6,11 +6,11 @@ export async function getMachines(){
     return data.data
 }
 
-export async function createMachine(nome, modelo){
+export async function createMachine(name, model){
     const companyId = localStorage.getItem('companyId')
     const data = await api(`/machineCRUD?companyId=${companyId}`,{
         method: 'POST',
-        body: JSON.stringify({nome, modelo}),
+        body: JSON.stringify({name, model}),
     })
     return data.data
 }

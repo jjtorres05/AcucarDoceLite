@@ -1,60 +1,19 @@
-import { useState, useEffect } from 'react'
-import { X, Plus, Activity, Thermometer, Droplets, Sun, Waves, Settings2, ChevronDown, Cpu, Router, SatelliteDish } from 'lucide-react'
+import { useState } from 'react'
+import { X, Save, Activity, Plus, ChevronDown } from 'lucide-react'
 import Button from './Button'
 import Input from './Input'
-import CustomSelect from './CustomSelect'
-import { createSensor } from '../services/sensors'
-import { getMachines } from '../services/machines'
-
-const sensorTypes = [
-  { key: 'temperatura', label: 'Temperatura', icon: Thermometer },
-  { key: 'umidade', label: 'Umidade', icon: Droplets },
-  { key: 'luminosidade', label: 'Luminosidade', icon: Sun },
-  { key: 'vibracao', label: 'Vibração', icon: Waves },
-  { key: 'outro', label: 'Outro', icon: Settings2 },
-]
-
-const typeUnits = {
-  temperatura: '°C',
-  umidade: '%',
-  luminosidade: 'lux',
-  vibracao: 'mm/s',
-  outro: '',
-}
-
-const typeDefaults = {
-  temperatura: { min: 0, max: 100, zones: [
-    { from: 0, to: 10, color: 'bg-red-500' },
-    { from: 10, to: 20, color: 'bg-orange-400' },
-    { from: 20, to: 35, color: 'bg-green-500' },
-    { from: 35, to: 45, color: 'bg-orange-400' },
-    { from: 45, to: 100, color: 'bg-red-500' },
-  ]},
-  umidade: { min: 0, max: 100, zones: [
-    { from: 0, to: 20, color: 'bg-red-500' },
-    { from: 20, to: 40, color: 'bg-orange-400' },
-    { from: 40, to: 70, color: 'bg-green-500' },
-    { from: 70, to: 85, color: 'bg-orange-400' },
-    { from: 85, to: 100, color: 'bg-red-500' },
-  ]},
-  luminosidade: { min: 0, max: 10000, zones: [
-    { from: 0, to: 200, color: 'bg-red-500' },
-    { from: 200, to: 500, color: 'bg-orange-400' },
-    { from: 500, to: 5000, color: 'bg-green-500' },
-    { from: 5000, to: 8000, color: 'bg-orange-400' },
-    { from: 8000, to: 10000, color: 'bg-red-500' },
-  ]},
-  vibracao: { min: 0, max: 50, zones: [
-    { from: 0, to: 5, color: 'bg-green-500' },
-    { from: 5, to: 15, color: 'bg-orange-400' },
-    { from: 15, to: 50, color: 'bg-red-500' },
-  ]},
-}
+import { updateSensor, updateSensorRanges } from '../services/sensors'
 
 const colorToName = {
   'bg-green-500': 'Normal',
   'bg-orange-400': 'Precaução',
   'bg-red-500': 'Crítico',
+}
+
+const nameToColor = {
+  'Normal': 'bg-green-500',
+  'Precaução': 'bg-orange-400',
+  'Crítico': 'bg-red-500',
 }
 
 function AlertBar({ min, max, zones }) {
@@ -68,7 +27,6 @@ function AlertBar({ min, max, zones }) {
     const segFrom = allBounds[i]
     const segTo = allBounds[i + 1]
     const width = ((segTo - segFrom) / range) * 100
-
     let color = 'bg-red-500'
     for (const z of zones) {
       if (segFrom >= z.from && segTo <= z.to) {
@@ -76,7 +34,6 @@ function AlertBar({ min, max, zones }) {
         break
       }
     }
-
     segments.push({ width, color, from: segFrom, to: segTo })
   }
 
@@ -102,9 +59,9 @@ function AlertBar({ min, max, zones }) {
 
 function ZoneInput({ zone, onChange, onRemove }) {
   const colorOptions = [
-    { value: 'bg-green-500', label: 'Normal', dot: 'bg-green-500' },
-    { value: 'bg-orange-400', label: 'Precaução', dot: 'bg-orange-400' },
-    { value: 'bg-red-500', label: 'Crítico', dot: 'bg-red-500' },
+    { value: 'bg-green-500', label: 'Normal' },
+    { value: 'bg-orange-400', label: 'Precaução' },
+    { value: 'bg-red-500', label: 'Crítico' },
   ]
 
   return (
@@ -156,49 +113,29 @@ function ZoneInput({ zone, onChange, onRemove }) {
   )
 }
 
-export default function NewSensorModal({ onClose, onCreated }) {
-  const [machines, setMachines] = useState([])
-  const [device, setDevice] = useState('')
-  const [name, setName] = useState('')
-  const [model, setModel] = useState('')
-  const [type, setType] = useState('')
-  const [unit, setUnit] = useState('')
-  const [min, setMin] = useState(0)
-  const [max, setMax] = useState(100)
-  const [zones, setZones] = useState([
-    { from: 0, to: 15, color: 'bg-red-500' },
-    { from: 15, to: 25, color: 'bg-orange-400' },
-    { from: 25, to: 75, color: 'bg-green-500' },
-    { from: 75, to: 85, color: 'bg-orange-400' },
-    { from: 85, to: 100, color: 'bg-red-500' },
-  ])
+export default function EditSensorModal({ sensor, onClose, onUpdated }) {
+  const [name, setName] = useState(sensor.sensorName)
+  const [model, setModel] = useState(sensor.sensorModel)
+  const [active, setActive] = useState(sensor.sensorStatus)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    getMachines().then(setMachines).catch(() => {})
-  }, [])
+  const existingRanges = sensor.activationRanges || []
+  const allBounds = existingRanges.flatMap(r => [r.lowerBound, r.upperBound])
+  const initialMin = allBounds.length > 0 ? Math.min(...allBounds) : 0
+  const initialMax = allBounds.length > 0 ? Math.max(...allBounds) : 100
 
-  const deviceOptions = machines.map(m => ({
-    value: m.id,
-    label: m.name,
-    sub: m.model,
-    icon: <Router size={14} className="text-navy-900" />,
-    iconBg: 'bg-blue-50',
-    badge: m.active ? 'Ativo' : 'Inativo',
-    badgeClass: m.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
-  }))
-
-  const handleTypeSelect = (key) => {
-    setType(key)
-    setUnit(typeUnits[key])
-    const defaults = typeDefaults[key]
-    if (defaults) {
-      setMin(defaults.min)
-      setMax(defaults.max)
-      setZones(defaults.zones)
-    }
-  }
+  const [min, setMin] = useState(initialMin)
+  const [max, setMax] = useState(initialMax)
+  const [zones, setZones] = useState(
+    existingRanges.length > 0
+      ? existingRanges.map(r => ({
+          from: r.lowerBound,
+          to: r.upperBound,
+          color: nameToColor[r.name] || 'bg-green-500',
+        }))
+      : [{ from: 0, to: 100, color: 'bg-green-500' }]
+  )
 
   const updateZone = (index, updated) => {
     const next = [...zones]
@@ -214,22 +151,25 @@ export default function NewSensorModal({ onClose, onCreated }) {
     setZones(zones.filter((_, i) => i !== index))
   }
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name || !model || !device || !unit) return
+    if (!name || !model) return
     try {
       setLoading(true)
       setError('')
+
       const ranges = zones.map(z => ({
         name: colorToName[z.color] || 'Normal',
         lowerBound: z.from,
         upperBound: z.to,
       }))
-      await createSensor({ name, model, unit, sType: type || 'outro', machineId: device, ranges })
-      onCreated?.()
+
+      await updateSensor(sensor.sensorId, { name, model, active })
+      await updateSensorRanges(sensor.sensorId, ranges, existingRanges)
+      onUpdated?.()
       onClose()
     } catch (err) {
-      setError(err.message || 'Erro ao criar sensor')
+      setError(err.message || 'Erro ao atualizar sensor')
     } finally {
       setLoading(false)
     }
@@ -240,31 +180,20 @@ export default function NewSensorModal({ onClose, onCreated }) {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="bg-gold-500 rounded-t-xl px-5 py-3 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2 text-white">
-            <SatelliteDish size={18} />
-            <span className="font-semibold text-sm">Novo Sensor</span>
+            <Activity size={18} />
+            <span className="font-semibold text-sm">Editar Sensor</span>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white transition cursor-pointer">
             <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleCreate} className="p-5 space-y-5">
-          <CustomSelect
-            label="Dispositivo"
-            required
-            placeholder="Selecionar um dispositivo"
-            value={device}
-            onChange={setDevice}
-            options={deviceOptions}
-            hint="O sensor será vinculado a esse dispositivo."
-          />
-
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <Input
             label="Nome"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Exp: Temp Caldeira, Umidade Armazém"
           />
 
           <Input
@@ -272,44 +201,19 @@ export default function NewSensorModal({ onClose, onCreated }) {
             required
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder="Exp: DHT-22, ESPN-32"
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Tipo (preenche unidade)
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {sensorTypes.map((t) => {
-                const Icon = t.icon
-                const isSelected = type === t.key
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => handleTypeSelect(t.key)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition cursor-pointer ${
-                      isSelected
-                        ? 'border-gold-500 bg-gold-100 text-gold-500 font-medium'
-                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    <Icon size={14} />
-                    {t.label}
-                  </button>
-                )
-              })}
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Selecione para preencher a unidade automaticamente.</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+            <button
+              type="button"
+              onClick={() => setActive(!active)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer ${active ? 'bg-green-500' : 'bg-gray-300'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${active ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+            <span className="ml-2 text-sm text-gray-600">{active ? 'Ativo' : 'Inativo'}</span>
           </div>
-
-          <Input
-            label="Unidade"
-            required
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            placeholder="°C"
-          />
 
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -326,7 +230,6 @@ export default function NewSensorModal({ onClose, onCreated }) {
                 type="number"
                 value={min}
                 onChange={(e) => setMin(Number(e.target.value))}
-                placeholder="0..."
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition"
               />
             </div>
@@ -336,7 +239,6 @@ export default function NewSensorModal({ onClose, onCreated }) {
                 type="number"
                 value={max}
                 onChange={(e) => setMax(Number(e.target.value))}
-                placeholder="100..."
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition"
               />
             </div>
@@ -378,10 +280,6 @@ export default function NewSensorModal({ onClose, onCreated }) {
             </span>
           </div>
 
-          <p className="text-xs text-gray-400">
-            * Leituras fora dessas faixas aparecem automaticamente nos sensores em atenção na página principal.
-          </p>
-
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           <div className="flex justify-center gap-3 pt-2">
@@ -389,8 +287,8 @@ export default function NewSensorModal({ onClose, onCreated }) {
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              <Plus size={14} />
-              {loading ? 'Criando...' : 'Criar'}
+              <Save size={14} />
+              {loading ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </form>

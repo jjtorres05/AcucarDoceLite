@@ -11,9 +11,10 @@ const titles = {
   '/configuracoes': 'Configurações',
 }
 
-export default function TopBar({ companyName = 'Usina De Cambé' }) {
+export default function TopBar() {
   const { pathname } = useLocation()
   const title = titles[pathname] || 'Dashboard'
+  const companyName = localStorage.getItem('companyName') || 'Empresa'
 
   return (
     <header className="bg-white px-6 py-4 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.08)]">

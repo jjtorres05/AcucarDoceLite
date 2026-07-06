@@ -1,18 +1,32 @@
 import { useState } from 'react'
-import { X, Plus, Cpu, Info, Copy, Check, Key } from 'lucide-react'
+import { X, Plus, Cpu, Info, Copy, Check, Key, Router } from 'lucide-react'
 import Button from './Button'
 import Input from './Input'
+import { createMachine } from '../services/machines'
 
-export default function NewDeviceModal({ onClose }) {
+export default function NewDeviceModal({ onClose, onCreated }) {
   const [name, setName] = useState('')
   const [model, setModel] = useState('')
   const [created, setCreated] = useState(false)
   const [copied, setCopied] = useState(false)
-  const token = 'Tk_0000000...0000000'
+  const [token, setToken] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
-    if (name && model) setCreated(true)
+    if (!name || !model) return
+    try {
+      setLoading(true)
+      setError('')
+      const data = await createMachine(name, model)
+      setToken(data.key || '')
+      setCreated(true)
+    } catch (err) {
+      setError(err.message || 'Erro ao criar dispositivo')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCopy = () => {
@@ -26,10 +40,10 @@ export default function NewDeviceModal({ onClose }) {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="bg-gold-500 rounded-t-xl px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-white">
-            <Cpu size={18} />
+            <Router size={18} />
             <span className="font-semibold text-sm">Novo Dispositivo</span>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white transition cursor-pointer">
+          <button onClick={() => { if (created) onCreated?.(); onClose(); }} className="text-white/80 hover:text-white transition cursor-pointer">
             <X size={18} />
           </button>
         </div>
@@ -52,18 +66,20 @@ export default function NewDeviceModal({ onClose }) {
             placeholder="Exp: ESPN-32"
           />
 
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
           <div className="flex justify-center gap-3 pt-2">
-            <Button type="button" variant="muted" onClick={onClose}>
-              Cancelar
+            <Button type="button" variant="muted" onClick={() => { if (created) onCreated?.(); onClose(); }}>
+              {created ? 'Fechar' : 'Cancelar'}
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={loading}>
               <Plus size={14} />
-              Criar
+              {loading ? 'Criando...' : 'Criar'}
             </Button>
           </div>
         </form>
 
-        {created && (
+        {created && token && (
           <div className="mx-5 mb-5 border border-gray-200 rounded-xl overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 flex items-center gap-2 border-b border-gray-200">
               <Key size={16} className="text-navy-900" />
@@ -76,7 +92,6 @@ export default function NewDeviceModal({ onClose }) {
                   {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-1">O nome desse dispositivo deve ser único.</p>
             </div>
             <div className="mx-4 mb-4 flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
               <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />

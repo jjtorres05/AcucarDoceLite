@@ -1,23 +1,24 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 import Logo from '../components/Logo'
 import Input from '../components/Input'
 import CompanyCard from '../components/CompanyCard'
 
-const companies = [
-  { id: 1, name: 'AcucarDoce Ltda', alerts: 4 },
-  { id: 2, name: 'TechAgro Ltda', alerts: 3 },
-  { id: 3, name: 'Fazendinha', alerts: 2 },
-]
-
-export default function SelectCompany() {
+export default function SelectCompany({ onLogin }) {
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
+  const location = useLocation()
+  const companies = location.state?.companies || []
 
   const filtered = companies.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+    c.company.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  const handleSelect = (company) => {
+    onLogin(company.company.id, company.company.name, company.roleCompany)
+    navigate('/dashboard')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,7 +29,6 @@ export default function SelectCompany() {
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          Vinicius Jr
           <ChevronDown size={14} />
         </button>
       </header>
@@ -50,12 +50,11 @@ export default function SelectCompany() {
         </div>
 
         <div className="flex flex-wrap justify-center gap-6">
-          {filtered.map((company) => (
+          {filtered.map((item) => (
             <CompanyCard
-              key={company.id}
-              name={company.name}
-              alerts={company.alerts}
-              onClick={() => navigate('/dispositivos')}
+              key={item.company.id}
+              name={item.company.name}
+              onClick={() => handleSelect(item)}
             />
           ))}
         </div>

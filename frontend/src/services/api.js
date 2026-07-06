@@ -19,7 +19,14 @@ export async function api(endpoint,options= {}) {
     const data = await response.json()
 
     if(!response.ok){
-        throw {status: response.status, ...data}
+        let message = data.msg || data.message || data.error || 'Erro desconhecido'
+        if (response.status === 403) message = 'Acesso não permitido'
+        if (response.status === 409) message = 'Elemento duplicado — já existe um registro com esses dados'
+        if (response.status === 404) message = 'Recurso não encontrado'
+        const err = new Error(message)
+        err.status = response.status
+        err.data = data
+        throw err
     }
 
     return data

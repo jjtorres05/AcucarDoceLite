@@ -16,6 +16,12 @@ export async function getCompanies(){
 export function logout(){
     localStorage.removeItem('token')
     localStorage.removeItem('companyId')
+    localStorage.removeItem('companyName')
+    localStorage.removeItem('roleCompany')
+}
+
+export function isAdmin(){
+    return localStorage.getItem('roleCompany') === '1'
 }
 
 export function getToken(){

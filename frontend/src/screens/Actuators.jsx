@@ -1,39 +1,76 @@
-import { useState } from 'react'
-import { Plus, Filter, ArrowUpDown, Eye, Edit, Power, Trash2, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Filter, ArrowUpDown, Edit, Power, Trash2, X } from 'lucide-react'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import StatusBadge from '../components/StatusBadge'
-import ActuatorTypeBadge from '../components/ActuatorTypeBadge'
 import { DataTable, DataRow, DataCell } from '../components/DataTable'
 import Pagination from '../components/Pagination'
 import NewActuatorModal from '../components/NewActuatorModal'
+import EditActuatorModal from '../components/EditActuatorModal'
+import { getActuators, deleteActuator, updateActuator } from '../services/actuators'
+import { isAdmin } from '../services/auth'
 
-const actuators = [
-  { id: 1, name: 'Válvula de água', type: 'Irrigador', device: 'Caldeira-A', model: 'ESPN-32', sensor: 'Humidade de cultivo', sensorCount: 2, status: 'Ativo' },
-  { id: 2, name: 'Bomba de água', type: 'Motor', device: 'Armazém-A', model: 'ESPN-33', sensor: 'Armazenamento de água', sensorCount: null, status: 'Ativo' },
-  { id: 3, name: 'Ventilador', type: 'Ventilador', device: 'Caldeira-B', model: 'ESPN-34', sensor: 'Temperatura de armazenamento', sensorCount: 2, status: 'Ativo' },
-  { id: 4, name: 'Portão de entrada', type: 'Porta', device: 'Armazém-B', model: 'ESPN-35', sensor: 'Sensor de iluminação', sensorCount: null, status: 'Inativo' },
-]
-
-const columns = [
+const baseColumns = [
   { key: 'name', label: 'Nome / Modelo' },
-  { key: 'type', label: 'Tipo' },
-  { key: 'device', label: 'Dispositivos' },
+  { key: 'device', label: 'Dispositivo' },
   { key: 'sensor', label: 'Sensor de controle' },
   { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Ações', center: true },
 ]
 
 export default function Actuators() {
+  const [actuators, setActuators] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   const [showSort, setShowSort] = useState(false)
   const [page, setPage] = useState(1)
   const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const admin = isAdmin()
+
+  const fetchActuators = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const data = await getActuators()
+      setActuators(data)
+    } catch (err) {
+      setError('Erro ao carregar atuadores')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchActuators()
+  }, [])
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir este atuador?')) return
+    try {
+      await deleteActuator(id)
+      fetchActuators()
+    } catch (err) {
+      setError('Erro ao excluir atuador')
+    }
+  }
+
+  const handleToggle = async (actuator) => {
+    try {
+      await updateActuator(actuator.actuatorId, { active: !actuator.actuatorStatus })
+      fetchActuators()
+    } catch (err) {
+      setError('Erro ao alterar status do atuador')
+    }
+  }
 
   const filtered = actuators.filter((a) =>
-    a.name.toLowerCase().includes(search.toLowerCase())
+    a.actuatorName.toLowerCase().includes(search.toLowerCase())
   )
+
+  if (loading) return <p className="text-center py-8 text-gray-500">Carregando...</p>
+  if (error) return <p className="text-center py-8 text-red-500">{error}</p>
 
   return (
     <div>
@@ -43,7 +80,7 @@ export default function Actuators() {
             icon="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Procure Um Dispositivo Pelo Nome"
+            placeholder="Procure Um Atuador Pelo Nome"
             className="w-80"
           />
           <Button variant="gold" size="sm" onClick={() => setShowFilter(!showFilter)}>
@@ -57,52 +94,66 @@ export default function Actuators() {
             {showSort && <X size={12} />}
           </Button>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus size={16} />
-          Criar Dispositivo
-        </Button>
+        {admin && (
+          <Button onClick={() => setShowModal(true)}>
+            <Plus size={16} />
+            Criar Atuador
+          </Button>
+        )}
       </div>
 
-      <DataTable columns={columns}>
+      <DataTable columns={admin ? [...baseColumns, { key: 'actions', label: 'Ações', center: true }] : baseColumns}>
         {filtered.map((actuator) => (
-          <DataRow key={actuator.id}>
+          <DataRow key={actuator.actuatorId}>
             <DataCell>
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${actuator.status === 'Ativo' ? 'bg-green-500' : 'bg-orange-500'}`} />
-                <p className="font-medium text-navy-900 text-sm">{actuator.name}</p>
+                <span className={`w-2 h-2 rounded-full ${actuator.actuatorStatus ? 'bg-green-500' : 'bg-orange-500'}`} />
+                <div>
+                  <p className="font-medium text-navy-900 text-sm">{actuator.actuatorName}</p>
+                  <p className="text-xs text-gray-400">{actuator.actuatorModel}</p>
+                </div>
               </div>
             </DataCell>
             <DataCell>
-              <ActuatorTypeBadge type={actuator.type} />
+              <p className="font-medium text-navy-900 text-sm">{actuator.machineName}</p>
+              <p className="text-xs text-gray-400">{actuator.machineModel}</p>
             </DataCell>
             <DataCell>
-              <p className="font-medium text-navy-900 text-sm">{actuator.device}</p>
-              <p className="text-xs text-gray-400">{actuator.model}</p>
-            </DataCell>
-            <DataCell>
-              <p className="text-sm text-navy-900">{actuator.sensor}</p>
-              {actuator.sensorCount && (
-                <p className="text-xs text-gray-400">{actuator.sensorCount} ativos</p>
+              {actuator.sensorName ? (
+                <div>
+                  <p className="text-sm text-navy-900">{actuator.sensorName}</p>
+                  <p className="text-xs text-gray-400">{actuator.sensorModel}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">Sem sensor</p>
               )}
             </DataCell>
             <DataCell>
-              <StatusBadge status={actuator.status} />
+              <StatusBadge status={actuator.actuatorStatus ? 'Ativo' : 'Inativo'} />
             </DataCell>
-            <DataCell center>
-              <div className="flex items-center justify-center gap-1">
-                <Button variant="ghost" size="icon" title="Ver"><Eye size={16} /></Button>
-                <Button variant="ghost" size="icon" title="Editar"><Edit size={16} /></Button>
-                <Button variant="danger" size="icon" title="Ligar/Desligar"><Power size={16} /></Button>
-                <Button variant="danger" size="icon" title="Excluir"><Trash2 size={16} /></Button>
-              </div>
-            </DataCell>
+            {admin && (
+              <DataCell center>
+                <div className="flex items-center justify-center gap-1">
+                  <Button variant="ghost" size="icon" title="Editar" onClick={() => setEditing(actuator)}>
+                    <Edit size={16} />
+                  </Button>
+                  <Button variant="danger" size="icon" title="Ligar/Desligar" onClick={() => handleToggle(actuator)}>
+                    <Power size={16} />
+                  </Button>
+                  <Button variant="danger" size="icon" title="Excluir" onClick={() => handleDelete(actuator.actuatorId)}>
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </DataCell>
+            )}
           </DataRow>
         ))}
       </DataTable>
 
-      <Pagination total={3} current={page} onPageChange={setPage} />
+      <Pagination total={Math.ceil(filtered.length / 5) || 1} current={page} onPageChange={setPage} />
 
-      {showModal && <NewActuatorModal onClose={() => setShowModal(false)} />}
+      {showModal && <NewActuatorModal onClose={() => setShowModal(false)} onCreated={fetchActuators} />}
+      {editing && <EditActuatorModal actuator={editing} onClose={() => setEditing(null)} onUpdated={fetchActuators} />}
     </div>
   )
 }
