@@ -11,10 +11,12 @@ export async function api(endpoint,options= {}) {
     const response = await fetch (`${BASE_URL}${endpoint}`, config)
 
     if(response.status === 401){
-        localStorage.removeItem('token')
-        localStorage.removeItem('companyId')
-        window.location.href = '/login'
-        throw new Error('Nao autorizado')
+        if (endpoint.includes('/login') || !localStorage.getItem('companyId')) {
+            localStorage.removeItem('token')
+            localStorage.removeItem('companyId')
+            window.location.href = '/login'
+        }
+        throw new Error('Acesso não permitido')
     }
     const data = await response.json()
 

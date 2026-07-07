@@ -1,22 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 import Logo from '../components/Logo'
 import Input from '../components/Input'
 import CompanyCard from '../components/CompanyCard'
+import { getCompanies } from '../services/auth'
 
 export default function SelectCompany({ onLogin }) {
   const [search, setSearch] = useState('')
+  const [companies, setCompanies] = useState([])
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const companies = location.state?.companies || []
+
+  useEffect(() => {
+    if (location.state?.companies) {
+      setCompanies(location.state.companies)
+    } else {
+      setLoading(true)
+      getCompanies()
+        .then(setCompanies)
+        .catch(() => navigate('/login'))
+        .finally(() => setLoading(false))
+    }
+  }, [])
+
+  const getCompanyData = (item) => item.company || item
+  const getRole = (item) => item.roleCompany ?? 0
 
   const filtered = companies.filter((c) =>
-    c.company.name.toLowerCase().includes(search.toLowerCase())
+    getCompanyData(c).name?.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleSelect = (company) => {
-    onLogin(company.company.id, company.company.name, company.roleCompany)
+  const handleSelect = (item) => {
+    const company = getCompanyData(item)
+    onLogin(company.id, company.name, getRole(item))
     navigate('/dashboard')
   }
 
@@ -50,13 +68,16 @@ export default function SelectCompany({ onLogin }) {
         </div>
 
         <div className="flex flex-wrap justify-center gap-6">
-          {filtered.map((item) => (
-            <CompanyCard
-              key={item.company.id}
-              name={item.company.name}
-              onClick={() => handleSelect(item)}
-            />
-          ))}
+          {filtered.map((item) => {
+            const company = getCompanyData(item)
+            return (
+              <CompanyCard
+                key={company.id}
+                name={company.name}
+                onClick={() => handleSelect(item)}
+              />
+            )
+          })}
         </div>
       </main>
     </div>

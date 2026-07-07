@@ -24,7 +24,8 @@ export default function Login({ onLogin }) {
       const companies = await getCompanies()
 
       if (companies.length === 1) {
-        onLogin(companies[0].company.id, companies[0].company.name, companies[0].roleCompany)
+        const c = companies[0].company || companies[0]
+        onLogin(c.id, c.name, companies[0].roleCompany ?? 0)
         navigate('/dashboard')
       } else {
         navigate('/empresas', { state: { companies } })
