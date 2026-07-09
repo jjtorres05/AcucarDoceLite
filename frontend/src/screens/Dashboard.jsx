@@ -30,7 +30,7 @@ function timeAgo(timestamp) {
 }
 
 function getSeverity(reading) {
-  if (!reading.range) return 'warning'
+  if (!reading.range) return 'critical'
   const name = reading.range.name?.toLowerCase() || ''
   if (name === 'normal') return 'ok'
   if (name.includes('crit') || name.includes('danger') || name.includes('perigo')) return 'critical'
@@ -69,7 +69,7 @@ function SensorBar({ sensor, sensorName, sensorData, onClick }) {
       className="flex items-center gap-4 py-3 cursor-pointer hover:bg-gray-50 -mx-4 px-4 transition-colors"
     >
       <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-        severity === 'critical' ? 'bg-red-500' : 'bg-amber-600'
+        severity === 'critical' ? 'bg-red-500' : severity === 'warning' ? 'bg-amber-500' : 'bg-green-500'
       }`} />
       <div className="min-w-[100px]">
         <p className="text-sm font-semibold text-navy-900">{sensorName || sensor.sensorId.slice(0, 8) + '...'}</p>
@@ -89,7 +89,7 @@ function SensorBar({ sensor, sensorName, sensorData, onClick }) {
         />
       </div>
       <span className={`text-2xl font-bold shrink-0 ${
-        severity === 'critical' ? 'text-red-500' : 'text-amber-600'
+        severity === 'critical' ? 'text-red-500' : severity === 'warning' ? 'text-amber-500' : 'text-green-500'
       }`}>
         {fmt(sensor.value)}{unit}
       </span>

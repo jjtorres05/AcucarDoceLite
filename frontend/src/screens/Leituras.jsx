@@ -1,34 +1,47 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { SatelliteDish, ChevronDown, Search, ToggleRight } from 'lucide-react'
+import { SatelliteDish, ChevronDown, Search, ToggleRight, Calendar } from 'lucide-react'
 import LineChart from '../components/LineChart'
 import SensorTypeBadge from '../components/SensorTypeBadge'
 import { getSensors } from '../services/sensors'
 import { getActuators } from '../services/actuators'
 import { getSensorDashboard } from '../services/registry'
 
-function getSevenDaysRange() {
+const intervalOptions = [
+  { key: '24h', label: '24h', hours: 24 },
+  { key: '7d', label: '7 dias', hours: 7 * 24 },
+  { key: '30d', label: '30 dias', hours: 30 * 24 },
+  { key: 'custom', label: 'Personalizado', hours: null },
+]
+
+function getRange(hours) {
   const end = new Date()
-  const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const start = new Date(end.getTime() - hours * 60 * 60 * 1000)
   return { startDate: start.toISOString(), endDate: end.toISOString() }
 }
 
-function formatChartData(sensorData) {
+function formatChartData(sensorData, granularity) {
   if (!sensorData || sensorData.length === 0) return null
   const raw = sensorData.map((point) => {
     const d = new Date(point.timestamp)
     const day = d.getDate().toString().padStart(2, '0')
     const month = (d.getMonth() + 1).toString().padStart(2, '0')
     const hour = d.getHours().toString().padStart(2, '0')
+    const min = d.getMinutes().toString().padStart(2, '0')
+    const label = granularity === 'minute' ? `${day}/${month} ${hour}:${min}` : `${day}/${month} ${hour}h`
+    const avg = Math.round(point.avgRecord * 100) / 100
+    const stdDev = Math.round((point.stdDevRecord || 0) * 100) / 100
     return {
-      label: `${day}/${month} ${hour}h`,
-      avg: Math.round(point.avgRecord * 100) / 100,
+      label,
+      avg,
       min: Math.round(point.minRecord * 100) / 100,
       max: Math.round(point.maxRecord * 100) / 100,
-      median: Math.round(point.medianRecord * 100) / 100,
+      avgPlusStd: Math.round((avg + stdDev) * 100) / 100,
+      avgMinusStd: Math.round((avg - stdDev) * 100) / 100,
     }
   })
-  const step = Math.max(1, Math.floor(raw.length / 14))
+  const maxPoints = granularity === 'minute' ? 30 : 14
+  const step = Math.max(1, Math.floor(raw.length / maxPoints))
   return raw.filter((_, i) => i % step === 0 || i === raw.length - 1)
 }
 
@@ -124,6 +137,51 @@ function SensorSelector({ sensors, selectedId, onSelect }) {
   )
 }
 
+function IntervalSelector({ selected, onSelect, customStart, customEnd, onCustomStartChange, onCustomEndChange, onCustomApply }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {intervalOptions.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onSelect(opt.key)}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer ${
+            selected === opt.key
+              ? 'bg-gold-500 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+      {selected === 'custom' && (
+        <div className="flex items-center gap-2 ml-2">
+          <input
+            type="datetime-local"
+            value={customStart}
+            onChange={(e) => onCustomStartChange(e.target.value)}
+            className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
+          />
+          <span className="text-gray-400 text-sm">até</span>
+          <input
+            type="datetime-local"
+            value={customEnd}
+            onChange={(e) => onCustomEndChange(e.target.value)}
+            className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
+          />
+          <button
+            type="button"
+            onClick={onCustomApply}
+            className="px-3 py-1.5 bg-gold-500 text-white rounded-lg text-sm font-medium hover:bg-gold-400 transition cursor-pointer"
+          >
+            Aplicar
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Leituras() {
   const [searchParams] = useSearchParams()
   const preselectedId = searchParams.get('sensorId') || ''
@@ -135,6 +193,9 @@ export default function Leituras() {
   const [actuators, setActuators] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingPlot, setLoadingPlot] = useState(false)
+  const [interval, setInterval] = useState('7d')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
 
   useEffect(() => {
     Promise.allSettled([getSensors(), getActuators()])
@@ -150,17 +211,15 @@ export default function Leituras() {
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => {
-    if (!selectedSensorId) return
+  const fetchPlot = (sensorId, startDate, endDate) => {
     setLoadingPlot(true)
     setChartData(null)
     setSensorInfo(null)
-
-    const { startDate, endDate } = getSevenDaysRange()
-
-    getSensorDashboard(selectedSensorId, startDate, endDate)
+    const diffHours = (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60)
+    const granularity = diffHours > 24 ? 'hour' : 'minute'
+    getSensorDashboard(sensorId, startDate, endDate)
       .then(({ sensorData, plotData }) => {
-        setChartData(formatChartData(sensorData))
+        setChartData(formatChartData(sensorData, granularity))
         setSensorInfo(plotData)
       })
       .catch(() => {
@@ -168,7 +227,23 @@ export default function Leituras() {
         setSensorInfo(null)
       })
       .finally(() => setLoadingPlot(false))
-  }, [selectedSensorId])
+  }
+
+  useEffect(() => {
+    if (!selectedSensorId || interval === 'custom') return
+    const opt = intervalOptions.find(o => o.key === interval)
+    const { startDate, endDate } = getRange(opt.hours)
+    fetchPlot(selectedSensorId, startDate, endDate)
+  }, [selectedSensorId, interval])
+
+  const handleIntervalSelect = (key) => {
+    setInterval(key)
+  }
+
+  const handleCustomApply = () => {
+    if (!customStart || !customEnd || !selectedSensorId) return
+    fetchPlot(selectedSensorId, new Date(customStart).toISOString(), new Date(customEnd).toISOString())
+  }
 
   const selectedSensor = sensors.find((s) => s.sensorId === selectedSensorId)
 
@@ -255,25 +330,43 @@ export default function Leituras() {
       )}
 
       {selectedSensorId && (
-        loadingPlot ? (
-          <p className="text-center py-8 text-gray-500">Carregando leituras...</p>
-        ) : chartData ? (
-          <LineChart
-            title={`${sensorName || 'Sensor'} — Últimos 7 dias`}
-            data={chartData}
-            series={{
-              avg: { color: '#d97706', label: 'Média' },
-              max: { color: '#ef4444', label: 'Máximo' },
-              min: { color: '#3b82f6', label: 'Mínimo' },
-              median: { color: '#10b981', label: 'Mediana' },
-            }}
-            height={280}
-          />
-        ) : (
-          <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6 text-center">
-            <p className="text-gray-400">Sem dados de leitura para este sensor nos últimos 7 dias</p>
+        <>
+          <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar size={16} className="text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">Intervalo de tempo</span>
+            </div>
+            <IntervalSelector
+              selected={interval}
+              onSelect={handleIntervalSelect}
+              customStart={customStart}
+              customEnd={customEnd}
+              onCustomStartChange={setCustomStart}
+              onCustomEndChange={setCustomEnd}
+              onCustomApply={handleCustomApply}
+            />
           </div>
-        )
+          {loadingPlot ? (
+            <p className="text-center py-8 text-gray-500">Carregando leituras...</p>
+          ) : chartData ? (
+            <LineChart
+              title={`${sensorName || 'Sensor'} — ${intervalOptions.find(o => o.key === interval)?.label || 'Personalizado'}`}
+              data={chartData}
+              series={{
+                avg: { color: '#d97706', label: 'Média' },
+                max: { color: '#ef4444', label: 'Máximo' },
+                min: { color: '#3b82f6', label: 'Mínimo' },
+                avgPlusStd: { color: '#8b5cf6', label: 'Média + DP', pointOnly: true },
+                avgMinusStd: { color: '#8b5cf6', label: 'Média − DP', pointOnly: true },
+              }}
+              height={280}
+            />
+          ) : (
+            <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6 text-center">
+              <p className="text-gray-400">Sem dados de leitura para este sensor no período selecionado</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
