@@ -21,17 +21,27 @@ export default function ReadingBar({ value, min = 0, max, unit, ago, activationR
   const range = max - min
   const pct = hasValue && range > 0 ? Math.min(Math.max(((value - min) / range) * 100, 0), 100) : 50
 
-  const zones = activationRanges && activationRanges.length > 0
-    ? activationRanges.map(r => ({
-        from: r.lowerBound,
-        to: r.upperBound,
-        color: nameToColor[r.name] || 'bg-green-500',
-      }))
-    : [{ from: 0, to: 100, color: 'bg-gray-300' }]
-
   const barMin = activationRanges?.length > 0 ? min : 0
   const barMax = activationRanges?.length > 0 ? max : 100
   const barRange = barMax - barMin || 1
+
+  const buildSegments = () => {
+    if (!activationRanges || activationRanges.length === 0)
+      return [{ from: 0, to: 100, color: 'bg-gray-300' }]
+    const sorted = [...activationRanges]
+      .map(r => ({ from: r.lowerBound, to: r.upperBound, color: nameToColor[r.name] || 'bg-green-500' }))
+      .sort((a, b) => a.from - b.from)
+    const segs = []
+    let cursor = barMin
+    for (const z of sorted) {
+      if (z.from > cursor) segs.push({ from: cursor, to: z.from, color: 'bg-gray-200' })
+      segs.push(z)
+      cursor = z.to
+    }
+    if (cursor < barMax) segs.push({ from: cursor, to: barMax, color: 'bg-gray-200' })
+    return segs
+  }
+  const zones = buildSegments()
 
   return (
     <div className="min-w-[150px]">

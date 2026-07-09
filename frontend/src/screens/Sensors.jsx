@@ -14,6 +14,8 @@ import EditSensorModal from '../components/EditSensorModal'
 import ConfirmModal from '../components/ConfirmModal'
 import { getSensors, deleteSensor, updateSensor } from '../services/sensors'
 import { getDashboardReadings } from '../services/registry'
+import DropdownPanel from '../components/DropdownPanel'
+import FilterOption from '../components/FilterOption'
 import { isAdmin } from '../services/auth'
 
 const PER_PAGE = 5
@@ -47,29 +49,6 @@ function getMinutesAgo(timestamp) {
   return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000)
 }
 
-function DropdownPanel({ open, onClose, children, refEl }) {
-  if (!open) return null
-  return (
-    <div ref={refEl} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 min-w-[200px]">
-      {children}
-    </div>
-  )
-}
-
-function FilterOption({ label, active, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition cursor-pointer ${
-        active ? 'bg-gold-50 text-gold-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
-      }`}
-    >
-      {label}
-    </button>
-  )
-}
-
 export default function Sensors() {
   const navigate = useNavigate()
   const [sensors, setSensors] = useState([])
@@ -80,6 +59,7 @@ export default function Sensors() {
   const [showSort, setShowSort] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterType, setFilterType] = useState('all')
+  const [filterDevice, setFilterDevice] = useState('all')
   const [sortBy, setSortBy] = useState('name')
   const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
@@ -87,6 +67,7 @@ export default function Sensors() {
   const [editing, setEditing] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [readings, setReadings] = useState({})
+  const [rawReadings, setRawReadings] = useState([])
   const admin = isAdmin()
   const filterRef = useRef(null)
   const sortRef = useRef(null)
@@ -117,6 +98,7 @@ export default function Sensors() {
           map[r.sensorId] = r
         }
         setReadings(map)
+        setRawReadings(readingsData.value)
       }
     } catch (err) {
       setError('Erro ao carregar sensores')
@@ -150,6 +132,7 @@ export default function Sensors() {
   }
 
   const sensorTypes = [...new Set(sensors.map(s => s.sensorType).filter(Boolean))]
+  const deviceNames = [...new Set(sensors.map(s => s.machineName).filter(Boolean))]
 
   let result = sensors.filter((s) =>
     s.sensorName.toLowerCase().includes(search.toLowerCase())
@@ -159,6 +142,7 @@ export default function Sensors() {
   else if (filterStatus === 'inactive') result = result.filter(s => !s.sensorStatus)
 
   if (filterType !== 'all') result = result.filter(s => s.sensorType === filterType)
+  if (filterDevice !== 'all') result = result.filter(s => s.machineName === filterDevice)
 
   result.sort((a, b) => {
     let cmp = 0
@@ -176,15 +160,16 @@ export default function Sensors() {
 
   const totalActive = sensors.filter(s => s.sensorStatus).length
   const totalInactive = sensors.filter(s => !s.sensorStatus).length
-  const totalAttention = Object.values(readings).filter((r) => {
+  const totalAttention = rawReadings.filter((r) => {
     if (!r.range) return true
     const name = r.range.name?.toLowerCase() || ''
     return name !== 'normal'
   }).length
 
-  const handleFilterChange = (type, value) => {
-    if (type === 'status') setFilterStatus(value)
-    else setFilterType(value)
+  const handleFilterChange = (filterKey, value) => {
+    if (filterKey === 'status') setFilterStatus(value)
+    else if (filterKey === 'type') setFilterType(value)
+    else if (filterKey === 'device') setFilterDevice(value)
     setPage(1)
   }
 
@@ -213,7 +198,7 @@ export default function Sensors() {
             <Button variant="gold" size="sm" onClick={() => { setShowFilter(!showFilter); setShowSort(false) }}>
               <Filter size={14} />
               Filtro
-              {(filterStatus !== 'all' || filterType !== 'all') && (
+              {(filterStatus !== 'all' || filterType !== 'all' || filterDevice !== 'all') && (
                 <span className="w-1.5 h-1.5 rounded-full bg-white" />
               )}
             </Button>
@@ -232,12 +217,22 @@ export default function Sensors() {
                   ))}
                 </>
               )}
-              {(filterStatus !== 'all' || filterType !== 'all') && (
+              {deviceNames.length > 0 && (
+                <>
+                  <div className="h-px bg-gray-100 my-2" />
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 px-3">Dispositivo</p>
+                  <FilterOption label="Todos" active={filterDevice === 'all'} onClick={() => handleFilterChange('device', 'all')} />
+                  {deviceNames.map(d => (
+                    <FilterOption key={d} label={d} active={filterDevice === d} onClick={() => handleFilterChange('device', d)} />
+                  ))}
+                </>
+              )}
+              {(filterStatus !== 'all' || filterType !== 'all' || filterDevice !== 'all') && (
                 <>
                   <div className="h-px bg-gray-100 my-2" />
                   <button
                     type="button"
-                    onClick={() => { setFilterStatus('all'); setFilterType('all'); setPage(1) }}
+                    onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterDevice('all'); setPage(1) }}
                     className="w-full text-center text-xs text-red-500 hover:text-red-600 py-1 cursor-pointer"
                   >
                     Limpar filtros

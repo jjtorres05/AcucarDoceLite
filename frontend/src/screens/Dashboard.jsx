@@ -13,7 +13,7 @@ import DashboardChart from '../components/DashboardChart'
 import { getMachines } from '../services/machines'
 import { getSensors } from '../services/sensors'
 import { getActuators } from '../services/actuators'
-import { getDashboardData } from '../services/registry'
+import { getDashboardData, getPlotData } from '../services/registry'
 
 function fmt(v) {
   return Number(v).toFixed(2)
@@ -37,10 +37,12 @@ function getSeverity(reading) {
   return 'warning'
 }
 
-function formatPlotForChart(plot) {
-  if (!plot.readsAggByHour || plot.readsAggByHour.length === 0) return null
+function formatPlotForChart(plotData) {
+  if (!plotData || plotData.length === 0) return null
+  const raw = plotData[0]
+  if (!raw?.readsAggByHour || raw.readsAggByHour.length === 0) return null
 
-  const data = plot.readsAggByHour.map((point) => {
+  const data = raw.readsAggByHour.map((point) => {
     const d = new Date(point.timestamp)
     const day = d.getDate().toString().padStart(2, '0')
     const month = (d.getMonth() + 1).toString().padStart(2, '0')
@@ -58,7 +60,7 @@ function formatPlotForChart(plot) {
 
 function SensorBar({ sensor, sensorName, sensorData, onClick }) {
   const severity = getSeverity(sensor)
-  const unit = sensorData?.unit || ''
+  const unit = sensorData?.sensorUnit || sensorData?.unit || ''
   const activationRanges = sensorData?.activationRanges || []
 
   return (
@@ -128,7 +130,7 @@ export default function Dashboard() {
   const [sensors, setSensors] = useState(null)
   const [actuators, setActuators] = useState(null)
   const [dashboardReadings, setDashboardReadings] = useState([])
-  const [plots, setPlots] = useState([])
+  const [alertPlots, setAlertPlots] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -144,7 +146,16 @@ export default function Dashboard() {
       if (results[2].status === 'fulfilled') setActuators(results[2].value)
       if (results[3].status === 'fulfilled' && results[3].value) {
         setDashboardReadings(results[3].value.notifications)
-        setPlots(results[3].value.plots)
+        const alertIds = results[3].value.alertSensors || []
+        if (alertIds.length > 0) {
+          const plotResults = await Promise.allSettled(
+            alertIds.slice(0, 4).map(id => getPlotData(id).then(data => ({ sensorId: id, data })))
+          )
+          const loaded = plotResults
+            .filter(r => r.status === 'fulfilled' && r.value.data?.length > 0)
+            .map(r => r.value)
+          setAlertPlots(loaded)
+        }
       }
       setLoading(false)
     }
@@ -164,8 +175,6 @@ export default function Dashboard() {
     const severity = getSeverity(r)
     return severity !== 'ok'
   })
-
-  const chartsToShow = plots.slice(0, 4)
 
   const alertas = sensoresAtencao.map((r) => {
     const severity = getSeverity(r)
@@ -304,13 +313,13 @@ export default function Dashboard() {
         </GoldPanel>
       </div>
 
-      {chartsToShow.length > 0 && (
+      {alertPlots.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {chartsToShow.map((plot, i) => {
-            const chartData = formatPlotForChart(plot)
+          {alertPlots.map((plot, i) => {
+            const chartData = formatPlotForChart(plot.data)
             if (!chartData) return null
 
-            const sensorLabel = `Sensor ${plot._id}`
+            const sensorLabel = sensorNameMap[plot.sensorId] || plot.sensorId.slice(0, 8) + '...'
 
             return (
               <DashboardChart

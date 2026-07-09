@@ -2,8 +2,8 @@ import { api } from "./api"
 
 export async function getDashboardData() {
   const companyId = localStorage.getItem('companyId')
-  const data = await api(`/getDashboard?companyId=${companyId}`)
-  return { notifications: data.notifications || [], plots: data.plots || [] }
+  const data = await api(`/getInitialDashboard?companyId=${companyId}`)
+  return { notifications: data.notifications || [], alertSensors: data.alertSensors || [] }
 }
 
 export async function getDashboardReadings() {
@@ -13,7 +13,7 @@ export async function getDashboardReadings() {
 
 export async function getPlotData(sensorId) {
   const companyId = localStorage.getItem('companyId')
-  const data = await api(`/getPlotOfSensor?sensorId=${sensorId}&companyId=${companyId}`)
+  const data = await api(`/refreshOneInitialPlot?sensorId=${sensorId}&companyId=${companyId}`)
   return data.data
 }
 

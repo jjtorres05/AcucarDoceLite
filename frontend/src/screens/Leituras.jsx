@@ -22,7 +22,7 @@ function formatChartData(sensorData) {
     const hour = d.getHours().toString().padStart(2, '0')
     return {
       label: `${day}/${month} ${hour}h`,
-      avg: Math.round(point.avgHour * 100) / 100,
+      avg: Math.round(point.avgRecord * 100) / 100,
       min: Math.round(point.minRecord * 100) / 100,
       max: Math.round(point.maxRecord * 100) / 100,
       median: Math.round(point.medianRecord * 100) / 100,

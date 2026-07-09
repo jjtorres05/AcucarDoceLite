@@ -9,6 +9,8 @@ import NewDeviceModal from '../components/NewDeviceModal'
 import EditDeviceModal from '../components/EditDeviceModal'
 import ConfirmModal from '../components/ConfirmModal'
 import { getMachines, deleteMachine, updateMachine } from '../services/machines'
+import DropdownPanel from '../components/DropdownPanel'
+import FilterOption from '../components/FilterOption'
 import { isAdmin } from '../services/auth'
 
 const PER_PAGE = 5
@@ -19,29 +21,6 @@ const baseColumns = [
   { key: 'actuators', label: 'Atuadores' },
   { key: 'status', label: 'Status' },
 ]
-
-function DropdownPanel({ open, children, refEl }) {
-  if (!open) return null
-  return (
-    <div ref={refEl} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 min-w-[200px]">
-      {children}
-    </div>
-  )
-}
-
-function FilterOption({ label, active, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition cursor-pointer ${
-        active ? 'bg-gold-50 text-gold-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
-      }`}
-    >
-      {label}
-    </button>
-  )
-}
 
 export default function Devices() {
   const [devices, setDevices] = useState([])

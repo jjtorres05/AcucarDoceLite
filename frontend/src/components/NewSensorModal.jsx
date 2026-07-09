@@ -58,7 +58,7 @@ const colorToName = {
 }
 
 function AlertBar({ min, max, zones }) {
-  const range = max - min
+  const range = Number(max) - Number(min)
   if (range <= 0) return null
 
   const allBounds = [min, ...zones.flatMap(z => [z.from, z.to]), max].sort((a, b) => a - b)
@@ -114,7 +114,7 @@ function ZoneInput({ zone, onChange, onRemove }) {
         <input
           type="number"
           value={zone.from}
-          onChange={(e) => onChange({ ...zone, from: Number(e.target.value) })}
+          onChange={(e) => onChange({ ...zone, from: e.target.value === '' ? '' : Number(e.target.value) })}
           className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 transition"
         />
       </div>
@@ -123,7 +123,7 @@ function ZoneInput({ zone, onChange, onRemove }) {
         <input
           type="number"
           value={zone.to}
-          onChange={(e) => onChange({ ...zone, to: Number(e.target.value) })}
+          onChange={(e) => onChange({ ...zone, to: e.target.value === '' ? '' : Number(e.target.value) })}
           className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 transition"
         />
       </div>
@@ -163,8 +163,8 @@ export default function NewSensorModal({ onClose, onCreated }) {
   const [model, setModel] = useState('')
   const [type, setType] = useState('')
   const [unit, setUnit] = useState('')
-  const [min, setMin] = useState(0)
-  const [max, setMax] = useState(100)
+  const [min, setMin] = useState('')
+  const [max, setMax] = useState('')
   const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -186,17 +186,13 @@ export default function NewSensorModal({ onClose, onCreated }) {
   const handleTypeSelect = (key) => {
     setType(key)
     setUnit(typeUnits[key])
-    const defaults = typeDefaults[key]
-    if (defaults) {
-      setMin(defaults.min)
-      setMax(defaults.max)
-      setZones(defaults.zones)
-    }
   }
 
   const updateZone = (index, updated) => {
-    if (updated.from < min) updated.from = min
-    if (updated.to > max) updated.to = max
+    const numMin = Number(min) || 0
+    const numMax = Number(max) || 0
+    if (updated.from < numMin) updated.from = numMin
+    if (updated.to > numMax) updated.to = numMax
     if (updated.from > updated.to) updated.from = updated.to
     const next = [...zones]
     next[index] = updated
@@ -204,7 +200,8 @@ export default function NewSensorModal({ onClose, onCreated }) {
   }
 
   const addZone = () => {
-    const lastTo = zones.length > 0 ? zones[zones.length - 1].to : min
+    const numMin = Number(min) || 0
+    const lastTo = zones.length > 0 ? zones[zones.length - 1].to : numMin
     setZones([...zones, { from: lastTo, to: lastTo, color: 'bg-green-500' }])
   }
 
@@ -223,7 +220,7 @@ export default function NewSensorModal({ onClose, onCreated }) {
   const handleCreate = async (e) => {
     e.preventDefault()
     if (!name || !model || !device || !unit) return
-    if (zonesOverlap()) {
+    if (zones.length > 0 && zonesOverlap()) {
       setError('As faixas não podem se sobrepor')
       return
     }
@@ -232,8 +229,8 @@ export default function NewSensorModal({ onClose, onCreated }) {
       setError('')
       const ranges = zones.map(z => ({
         name: colorToName[z.color] || 'Normal',
-        lowerBound: z.from,
-        upperBound: z.to,
+        lowerBound: Number(z.from) || 0,
+        upperBound: Number(z.to) || 0,
       }))
       await createSensor({ name, model, unit, sType: type || 'outro', machineId: device, ranges })
       onCreated?.()
@@ -335,8 +332,8 @@ export default function NewSensorModal({ onClose, onCreated }) {
               <input
                 type="number"
                 value={min}
-                onChange={(e) => setMin(Number(e.target.value))}
-                placeholder="0..."
+                onChange={(e) => setMin(e.target.value)}
+                placeholder="0"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition"
               />
             </div>
@@ -345,8 +342,8 @@ export default function NewSensorModal({ onClose, onCreated }) {
               <input
                 type="number"
                 value={max}
-                onChange={(e) => setMax(Number(e.target.value))}
-                placeholder="100..."
+                onChange={(e) => setMax(e.target.value)}
+                placeholder="100"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition"
               />
             </div>

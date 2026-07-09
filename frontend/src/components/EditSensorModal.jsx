@@ -71,7 +71,7 @@ function ZoneInput({ zone, onChange, onRemove }) {
         <input
           type="number"
           value={zone.from}
-          onChange={(e) => onChange({ ...zone, from: Number(e.target.value) })}
+          onChange={(e) => onChange({ ...zone, from: e.target.value === '' ? '' : Number(e.target.value) })}
           className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 transition"
         />
       </div>
@@ -80,7 +80,7 @@ function ZoneInput({ zone, onChange, onRemove }) {
         <input
           type="number"
           value={zone.to}
-          onChange={(e) => onChange({ ...zone, to: Number(e.target.value) })}
+          onChange={(e) => onChange({ ...zone, to: e.target.value === '' ? '' : Number(e.target.value) })}
           className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 transition"
         />
       </div>
@@ -245,7 +245,8 @@ export default function EditSensorModal({ sensor, onClose, onUpdated }) {
               <input
                 type="number"
                 value={min}
-                onChange={(e) => setMin(Number(e.target.value))}
+                onChange={(e) => setMin(e.target.value)}
+                placeholder="0"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition"
               />
             </div>
@@ -254,7 +255,8 @@ export default function EditSensorModal({ sensor, onClose, onUpdated }) {
               <input
                 type="number"
                 value={max}
-                onChange={(e) => setMax(Number(e.target.value))}
+                onChange={(e) => setMax(e.target.value)}
+                placeholder="100"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition"
               />
             </div>
