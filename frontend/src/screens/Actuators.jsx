@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Filter, ArrowUpDown, Edit, Power, Trash2, X } from 'lucide-react'
 import Button from '../components/Button'
 import Input from '../components/Input'
@@ -7,8 +7,11 @@ import { DataTable, DataRow, DataCell } from '../components/DataTable'
 import Pagination from '../components/Pagination'
 import NewActuatorModal from '../components/NewActuatorModal'
 import EditActuatorModal from '../components/EditActuatorModal'
+import ConfirmModal from '../components/ConfirmModal'
 import { getActuators, deleteActuator, updateActuator } from '../services/actuators'
 import { isAdmin } from '../services/auth'
+
+const PER_PAGE = 5
 
 const baseColumns = [
   { key: 'name', label: 'Nome / Modelo' },
@@ -17,6 +20,29 @@ const baseColumns = [
   { key: 'status', label: 'Status' },
 ]
 
+function DropdownPanel({ open, children, refEl }) {
+  if (!open) return null
+  return (
+    <div ref={refEl} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 min-w-[200px]">
+      {children}
+    </div>
+  )
+}
+
+function FilterOption({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition cursor-pointer ${
+        active ? 'bg-gold-50 text-gold-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function Actuators() {
   const [actuators, setActuators] = useState([])
   const [loading, setLoading] = useState(true)
@@ -24,10 +50,26 @@ export default function Actuators() {
   const [search, setSearch] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   const [showSort, setShowSort] = useState(false)
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterDevice, setFilterDevice] = useState('all')
+  const [sortBy, setSortBy] = useState('name')
+  const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const admin = isAdmin()
+  const filterRef = useRef(null)
+  const sortRef = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false)
+      if (sortRef.current && !sortRef.current.contains(e.target)) setShowSort(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   const fetchActuators = async () => {
     try {
@@ -47,12 +89,13 @@ export default function Actuators() {
   }, [])
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Tem certeza que deseja excluir este atuador?')) return
     try {
       await deleteActuator(id)
+      setConfirmDelete(null)
       fetchActuators()
     } catch (err) {
       setError('Erro ao excluir atuador')
+      setConfirmDelete(null)
     }
   }
 
@@ -65,9 +108,42 @@ export default function Actuators() {
     }
   }
 
-  const filtered = actuators.filter((a) =>
+  const deviceNames = [...new Set(actuators.map(a => a.machineName).filter(Boolean))]
+
+  let result = actuators.filter((a) =>
     a.actuatorName.toLowerCase().includes(search.toLowerCase())
   )
+
+  if (filterStatus === 'active') result = result.filter(a => a.actuatorStatus)
+  else if (filterStatus === 'inactive') result = result.filter(a => !a.actuatorStatus)
+
+  if (filterDevice !== 'all') result = result.filter(a => a.machineName === filterDevice)
+
+  result.sort((a, b) => {
+    let cmp = 0
+    if (sortBy === 'name') cmp = a.actuatorName.localeCompare(b.actuatorName)
+    else if (sortBy === 'status') cmp = (a.actuatorStatus === b.actuatorStatus ? 0 : a.actuatorStatus ? -1 : 1)
+    else if (sortBy === 'device') cmp = (a.machineName || '').localeCompare(b.machineName || '')
+    else if (sortBy === 'sensor') cmp = (a.sensorName || '').localeCompare(b.sensorName || '')
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
+  const totalPages = Math.ceil(result.length / PER_PAGE) || 1
+  if (page > totalPages) setPage(1)
+  const paginated = result.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+
+  const handleFilterChange = (type, value) => {
+    if (type === 'status') setFilterStatus(value)
+    else setFilterDevice(value)
+    setPage(1)
+  }
+
+  const handleSortChange = (field) => {
+    if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(field); setSortDir('asc') }
+    setShowSort(false)
+    setPage(1)
+  }
 
   if (loading) return <p className="text-center py-8 text-gray-500">Carregando...</p>
   if (error) return <p className="text-center py-8 text-red-500">{error}</p>
@@ -79,20 +155,59 @@ export default function Actuators() {
           <Input
             icon="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             placeholder="Procure Um Atuador Pelo Nome"
             className="w-80"
           />
-          <Button variant="gold" size="sm" onClick={() => setShowFilter(!showFilter)}>
-            <Filter size={14} />
-            Filtro
-            {showFilter && <X size={12} />}
-          </Button>
-          <Button variant="gold" size="sm" onClick={() => setShowSort(!showSort)}>
-            <ArrowUpDown size={14} />
-            Ordenar Por
-            {showSort && <X size={12} />}
-          </Button>
+          <div className="relative" ref={filterRef}>
+            <Button variant="gold" size="sm" onClick={() => { setShowFilter(!showFilter); setShowSort(false) }}>
+              <Filter size={14} />
+              Filtro
+              {(filterStatus !== 'all' || filterDevice !== 'all') && (
+                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+              )}
+            </Button>
+            <DropdownPanel open={showFilter}>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 px-3">Status</p>
+              <FilterOption label="Todos" active={filterStatus === 'all'} onClick={() => handleFilterChange('status', 'all')} />
+              <FilterOption label="Ativos" active={filterStatus === 'active'} onClick={() => handleFilterChange('status', 'active')} />
+              <FilterOption label="Inativos" active={filterStatus === 'inactive'} onClick={() => handleFilterChange('status', 'inactive')} />
+              {deviceNames.length > 0 && (
+                <>
+                  <div className="h-px bg-gray-100 my-2" />
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 px-3">Dispositivo</p>
+                  <FilterOption label="Todos" active={filterDevice === 'all'} onClick={() => handleFilterChange('device', 'all')} />
+                  {deviceNames.map(d => (
+                    <FilterOption key={d} label={d} active={filterDevice === d} onClick={() => handleFilterChange('device', d)} />
+                  ))}
+                </>
+              )}
+              {(filterStatus !== 'all' || filterDevice !== 'all') && (
+                <>
+                  <div className="h-px bg-gray-100 my-2" />
+                  <button
+                    type="button"
+                    onClick={() => { setFilterStatus('all'); setFilterDevice('all'); setPage(1) }}
+                    className="w-full text-center text-xs text-red-500 hover:text-red-600 py-1 cursor-pointer"
+                  >
+                    Limpar filtros
+                  </button>
+                </>
+              )}
+            </DropdownPanel>
+          </div>
+          <div className="relative" ref={sortRef}>
+            <Button variant="gold" size="sm" onClick={() => { setShowSort(!showSort); setShowFilter(false) }}>
+              <ArrowUpDown size={14} />
+              Ordenar Por
+            </Button>
+            <DropdownPanel open={showSort}>
+              <FilterOption label={`Nome ${sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'name'} onClick={() => handleSortChange('name')} />
+              <FilterOption label={`Status ${sortBy === 'status' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'status'} onClick={() => handleSortChange('status')} />
+              <FilterOption label={`Dispositivo ${sortBy === 'device' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'device'} onClick={() => handleSortChange('device')} />
+              <FilterOption label={`Sensor ${sortBy === 'sensor' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'sensor'} onClick={() => handleSortChange('sensor')} />
+            </DropdownPanel>
+          </div>
         </div>
         {admin && (
           <Button onClick={() => setShowModal(true)}>
@@ -103,7 +218,7 @@ export default function Actuators() {
       </div>
 
       <DataTable columns={admin ? [...baseColumns, { key: 'actions', label: 'Ações', center: true }] : baseColumns}>
-        {filtered.map((actuator) => (
+        {paginated.map((actuator) => (
           <DataRow key={actuator.actuatorId}>
             <DataCell>
               <div className="flex items-center gap-2">
@@ -140,7 +255,7 @@ export default function Actuators() {
                   <Button variant="danger" size="icon" title="Ligar/Desligar" onClick={() => handleToggle(actuator)}>
                     <Power size={16} />
                   </Button>
-                  <Button variant="danger" size="icon" title="Excluir" onClick={() => handleDelete(actuator.actuatorId)}>
+                  <Button variant="danger" size="icon" title="Excluir" onClick={() => setConfirmDelete(actuator.actuatorId)}>
                     <Trash2 size={16} />
                   </Button>
                 </div>
@@ -150,10 +265,19 @@ export default function Actuators() {
         ))}
       </DataTable>
 
-      <Pagination total={Math.ceil(filtered.length / 5) || 1} current={page} onPageChange={setPage} />
+      <Pagination total={totalPages} current={page} onPageChange={setPage} />
 
       {showModal && <NewActuatorModal onClose={() => setShowModal(false)} onCreated={fetchActuators} />}
       {editing && <EditActuatorModal actuator={editing} onClose={() => setEditing(null)} onUpdated={fetchActuators} />}
+      {confirmDelete && (
+        <ConfirmModal
+          title="Excluir atuador"
+          message="Tem certeza que deseja excluir este atuador? Esta ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   )
 }

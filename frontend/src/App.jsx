@@ -6,6 +6,7 @@ import Dashboard from './screens/Dashboard'
 import Devices from './screens/Devices'
 import Sensors from './screens/Sensors'
 import Actuators from './screens/Actuators'
+import Leituras from './screens/Leituras'
 import NotFound from './screens/NotFound'
 import DashboardLayout from './layouts/DashboardLayout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/dispositivos" element={<Devices />} />
         <Route path="/sensores" element={<Sensors />} />
         <Route path="/atuadores" element={<Actuators />} />
+        <Route path="/leituras" element={<Leituras />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

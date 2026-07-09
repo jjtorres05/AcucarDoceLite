@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Save, Cpu, RefreshCw, Copy, Check, Key, Info } from 'lucide-react'
 import Button from './Button'
 import Input from './Input'
+import ConfirmModal from './ConfirmModal'
 import { updateMachine } from '../services/machines'
 
 export default function EditDeviceModal({ device, onClose, onUpdated }) {
@@ -13,6 +14,7 @@ export default function EditDeviceModal({ device, onClose, onUpdated }) {
   const [newToken, setNewToken] = useState('')
   const [resetting, setResetting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -31,7 +33,7 @@ export default function EditDeviceModal({ device, onClose, onUpdated }) {
   }
 
   const handleResetToken = async () => {
-    if (!window.confirm('Tem certeza que deseja resetar o token? O token anterior será invalidado.')) return
+    setConfirmReset(false)
     try {
       setResetting(true)
       setError('')
@@ -99,7 +101,7 @@ export default function EditDeviceModal({ device, onClose, onUpdated }) {
               </div>
               <button
                 type="button"
-                onClick={handleResetToken}
+                onClick={() => setConfirmReset(true)}
                 disabled={resetting}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition cursor-pointer disabled:opacity-50"
               >
@@ -139,6 +141,15 @@ export default function EditDeviceModal({ device, onClose, onUpdated }) {
           </div>
         </form>
       </div>
+      {confirmReset && (
+        <ConfirmModal
+          title="Resetar token"
+          message="Tem certeza que deseja resetar o token? O token anterior será invalidado."
+          confirmLabel="Resetar"
+          onConfirm={handleResetToken}
+          onCancel={() => setConfirmReset(false)}
+        />
+      )}
     </div>
   )
 }

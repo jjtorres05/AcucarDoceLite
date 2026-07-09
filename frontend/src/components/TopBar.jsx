@@ -6,7 +6,7 @@ const titles = {
   '/sensores': 'Sensores',
   '/atuadores': 'Atuadores',
   '/dashboard': 'Dashboard',
-  '/relatorios': 'Relatórios',
+  '/leituras': 'Leituras',
   '/buscar': 'Buscar',
   '/configuracoes': 'Configurações',
 }

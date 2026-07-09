@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Filter, ArrowUpDown, Eye, Edit, Power, Trash2, X, Activity, CircleCheck, CircleAlert, AlertTriangle } from 'lucide-react'
 import Button from '../components/Button'
 import Input from '../components/Input'
@@ -10,10 +11,12 @@ import { DataTable, DataRow, DataCell } from '../components/DataTable'
 import Pagination from '../components/Pagination'
 import NewSensorModal from '../components/NewSensorModal'
 import EditSensorModal from '../components/EditSensorModal'
-import ViewSensorModal from '../components/ViewSensorModal'
+import ConfirmModal from '../components/ConfirmModal'
 import { getSensors, deleteSensor, updateSensor } from '../services/sensors'
 import { getDashboardReadings } from '../services/registry'
 import { isAdmin } from '../services/auth'
+
+const PER_PAGE = 5
 
 const baseColumns = [
   { key: 'name', label: 'Nome / Modelo' },
@@ -44,19 +47,58 @@ function getMinutesAgo(timestamp) {
   return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000)
 }
 
+function DropdownPanel({ open, onClose, children, refEl }) {
+  if (!open) return null
+  return (
+    <div ref={refEl} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 min-w-[200px]">
+      {children}
+    </div>
+  )
+}
+
+function FilterOption({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition cursor-pointer ${
+        active ? 'bg-gold-50 text-gold-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function Sensors() {
+  const navigate = useNavigate()
   const [sensors, setSensors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   const [showSort, setShowSort] = useState(false)
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterType, setFilterType] = useState('all')
+  const [sortBy, setSortBy] = useState('name')
+  const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [viewing, setViewing] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const [readings, setReadings] = useState({})
   const admin = isAdmin()
+  const filterRef = useRef(null)
+  const sortRef = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false)
+      if (sortRef.current && !sortRef.current.contains(e.target)) setShowSort(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   const fetchSensors = async () => {
     try {
@@ -88,12 +130,13 @@ export default function Sensors() {
   }, [])
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Tem certeza que deseja excluir este sensor?')) return
     try {
       await deleteSensor(id)
+      setConfirmDelete(null)
       fetchSensors()
     } catch (err) {
       setError('Erro ao excluir sensor')
+      setConfirmDelete(null)
     }
   }
 
@@ -106,9 +149,30 @@ export default function Sensors() {
     }
   }
 
-  const filtered = sensors.filter((s) =>
+  const sensorTypes = [...new Set(sensors.map(s => s.sensorType).filter(Boolean))]
+
+  let result = sensors.filter((s) =>
     s.sensorName.toLowerCase().includes(search.toLowerCase())
   )
+
+  if (filterStatus === 'active') result = result.filter(s => s.sensorStatus)
+  else if (filterStatus === 'inactive') result = result.filter(s => !s.sensorStatus)
+
+  if (filterType !== 'all') result = result.filter(s => s.sensorType === filterType)
+
+  result.sort((a, b) => {
+    let cmp = 0
+    if (sortBy === 'name') cmp = a.sensorName.localeCompare(b.sensorName)
+    else if (sortBy === 'type') cmp = (a.sensorType || '').localeCompare(b.sensorType || '')
+    else if (sortBy === 'status') cmp = (a.sensorStatus === b.sensorStatus ? 0 : a.sensorStatus ? -1 : 1)
+    else if (sortBy === 'device') cmp = (a.machineName || '').localeCompare(b.machineName || '')
+    else if (sortBy === 'actuators') cmp = ((a.numberActiveActuator || 0) + (a.numberInactiveActuator || 0)) - ((b.numberActiveActuator || 0) + (b.numberInactiveActuator || 0))
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
+  const totalPages = Math.ceil(result.length / PER_PAGE) || 1
+  if (page > totalPages) setPage(1)
+  const paginated = result.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
   const totalActive = sensors.filter(s => s.sensorStatus).length
   const totalInactive = sensors.filter(s => !s.sensorStatus).length
@@ -117,6 +181,19 @@ export default function Sensors() {
     const name = r.range.name?.toLowerCase() || ''
     return name !== 'normal'
   }).length
+
+  const handleFilterChange = (type, value) => {
+    if (type === 'status') setFilterStatus(value)
+    else setFilterType(value)
+    setPage(1)
+  }
+
+  const handleSortChange = (field) => {
+    if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(field); setSortDir('asc') }
+    setShowSort(false)
+    setPage(1)
+  }
 
   if (loading) return <p className="text-center py-8 text-gray-500">Carregando...</p>
   if (error) return <p className="text-center py-8 text-red-500">{error}</p>
@@ -128,20 +205,60 @@ export default function Sensors() {
           <Input
             icon="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             placeholder="Procure Um Sensor Pelo Nome"
             className="w-80"
           />
-          <Button variant="gold" size="sm" onClick={() => setShowFilter(!showFilter)}>
-            <Filter size={14} />
-            Filtro
-            {showFilter && <X size={12} />}
-          </Button>
-          <Button variant="gold" size="sm" onClick={() => setShowSort(!showSort)}>
-            <ArrowUpDown size={14} />
-            Ordenar Por
-            {showSort && <X size={12} />}
-          </Button>
+          <div className="relative" ref={filterRef}>
+            <Button variant="gold" size="sm" onClick={() => { setShowFilter(!showFilter); setShowSort(false) }}>
+              <Filter size={14} />
+              Filtro
+              {(filterStatus !== 'all' || filterType !== 'all') && (
+                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+              )}
+            </Button>
+            <DropdownPanel open={showFilter}>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 px-3">Status</p>
+              <FilterOption label="Todos" active={filterStatus === 'all'} onClick={() => handleFilterChange('status', 'all')} />
+              <FilterOption label="Ativos" active={filterStatus === 'active'} onClick={() => handleFilterChange('status', 'active')} />
+              <FilterOption label="Inativos" active={filterStatus === 'inactive'} onClick={() => handleFilterChange('status', 'inactive')} />
+              {sensorTypes.length > 0 && (
+                <>
+                  <div className="h-px bg-gray-100 my-2" />
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 px-3">Tipo</p>
+                  <FilterOption label="Todos" active={filterType === 'all'} onClick={() => handleFilterChange('type', 'all')} />
+                  {sensorTypes.map(t => (
+                    <FilterOption key={t} label={t} active={filterType === t} onClick={() => handleFilterChange('type', t)} />
+                  ))}
+                </>
+              )}
+              {(filterStatus !== 'all' || filterType !== 'all') && (
+                <>
+                  <div className="h-px bg-gray-100 my-2" />
+                  <button
+                    type="button"
+                    onClick={() => { setFilterStatus('all'); setFilterType('all'); setPage(1) }}
+                    className="w-full text-center text-xs text-red-500 hover:text-red-600 py-1 cursor-pointer"
+                  >
+                    Limpar filtros
+                  </button>
+                </>
+              )}
+            </DropdownPanel>
+          </div>
+          <div className="relative" ref={sortRef}>
+            <Button variant="gold" size="sm" onClick={() => { setShowSort(!showSort); setShowFilter(false) }}>
+              <ArrowUpDown size={14} />
+              Ordenar Por
+            </Button>
+            <DropdownPanel open={showSort}>
+              <FilterOption label={`Nome ${sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'name'} onClick={() => handleSortChange('name')} />
+              <FilterOption label={`Tipo ${sortBy === 'type' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'type'} onClick={() => handleSortChange('type')} />
+              <FilterOption label={`Status ${sortBy === 'status' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'status'} onClick={() => handleSortChange('status')} />
+              <FilterOption label={`Dispositivo ${sortBy === 'device' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'device'} onClick={() => handleSortChange('device')} />
+              <FilterOption label={`Atuadores ${sortBy === 'actuators' ? (sortDir === 'asc' ? '↑' : '↓') : ''}`} active={sortBy === 'actuators'} onClick={() => handleSortChange('actuators')} />
+            </DropdownPanel>
+          </div>
         </div>
         {admin && (
           <Button onClick={() => setShowModal(true)}>
@@ -178,7 +295,7 @@ export default function Sensors() {
       </div>
 
       <DataTable columns={baseColumns}>
-        {filtered.map((sensor) => {
+        {paginated.map((sensor) => {
           const reading = readings[sensor.sensorId]
           return (
             <DataRow key={sensor.sensorId}>
@@ -222,6 +339,14 @@ export default function Sensors() {
                     max={reading.max}
                     unit={sensor.unit || ''}
                     ago={getMinutesAgo(reading.timestamp)}
+                    activationRanges={sensor.activationRanges}
+                  />
+                ) : sensor.activationRanges?.length > 0 ? (
+                  <ReadingBar
+                    min={Math.min(...sensor.activationRanges.map(r => r.lowerBound))}
+                    max={Math.max(...sensor.activationRanges.map(r => r.upperBound))}
+                    unit={sensor.unit || ''}
+                    activationRanges={sensor.activationRanges}
                   />
                 ) : (
                   <span className="text-xs text-gray-400">Sem leitura</span>
@@ -229,7 +354,7 @@ export default function Sensors() {
               </DataCell>
               <DataCell center>
                 <div className="flex items-center justify-center gap-1">
-                  <Button variant="ghost" size="icon" title="Visualizar" onClick={() => setViewing(sensor)}>
+                  <Button variant="ghost" size="icon" title="Leituras" onClick={() => navigate(`/leituras?sensorId=${sensor.sensorId}`)}>
                     <Eye size={16} />
                   </Button>
                   {admin && (
@@ -240,7 +365,7 @@ export default function Sensors() {
                       <Button variant="danger" size="icon" title="Ligar/Desligar" onClick={() => handleToggle(sensor)}>
                         <Power size={16} />
                       </Button>
-                      <Button variant="danger" size="icon" title="Excluir" onClick={() => handleDelete(sensor.sensorId)}>
+                      <Button variant="danger" size="icon" title="Excluir" onClick={() => setConfirmDelete(sensor.sensorId)}>
                         <Trash2 size={16} />
                       </Button>
                     </>
@@ -252,11 +377,19 @@ export default function Sensors() {
         })}
       </DataTable>
 
-      <Pagination total={Math.ceil(filtered.length / 5) || 1} current={page} onPageChange={setPage} />
+      <Pagination total={totalPages} current={page} onPageChange={setPage} />
 
       {showModal && <NewSensorModal onClose={() => setShowModal(false)} onCreated={fetchSensors} />}
       {editing && <EditSensorModal sensor={editing} onClose={() => setEditing(null)} onUpdated={fetchSensors} />}
-      {viewing && <ViewSensorModal sensor={viewing} reading={readings[viewing.sensorId]} onClose={() => setViewing(null)} />}
+      {confirmDelete && (
+        <ConfirmModal
+          title="Excluir sensor"
+          message="Tem certeza que deseja excluir este sensor? Esta ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   )
 }

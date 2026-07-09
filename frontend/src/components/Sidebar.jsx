@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Cpu, Activity, CircleDot, BarChart3, Search, Settings, Airplay, SatelliteDish, Router, ToggleRight, User } from 'lucide-react'
+import { LayoutDashboard, Activity, Settings, SatelliteDish, Router, ToggleRight, User } from 'lucide-react'
 import logoImg from '../assets/favicon.svg'
 import { LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -9,7 +9,7 @@ const navItems = [
   { icon: Router, to: '/dispositivos', label: 'Dispositivos' },
   { icon: SatelliteDish, to: '/sensores', label: 'Sensores' },
   { icon: ToggleRight, to: '/atuadores', label: 'Atuadores' },
-  { icon: BarChart3, to: '/relatorios', label: 'Relatórios' },
+  { icon: Activity, to: '/leituras', label: 'Leituras' },
 ]
 
 const bottomItems = [

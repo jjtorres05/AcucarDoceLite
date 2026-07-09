@@ -165,13 +165,7 @@ export default function NewSensorModal({ onClose, onCreated }) {
   const [unit, setUnit] = useState('')
   const [min, setMin] = useState(0)
   const [max, setMax] = useState(100)
-  const [zones, setZones] = useState([
-    { from: 0, to: 15, color: 'bg-red-500' },
-    { from: 15, to: 25, color: 'bg-orange-400' },
-    { from: 25, to: 75, color: 'bg-green-500' },
-    { from: 75, to: 85, color: 'bg-orange-400' },
-    { from: 85, to: 100, color: 'bg-red-500' },
-  ])
+  const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -201,22 +195,38 @@ export default function NewSensorModal({ onClose, onCreated }) {
   }
 
   const updateZone = (index, updated) => {
+    if (updated.from < min) updated.from = min
+    if (updated.to > max) updated.to = max
+    if (updated.from > updated.to) updated.from = updated.to
     const next = [...zones]
     next[index] = updated
     setZones(next)
   }
 
   const addZone = () => {
-    setZones([...zones, { from: 0, to: 0, color: 'bg-green-500' }])
+    const lastTo = zones.length > 0 ? zones[zones.length - 1].to : min
+    setZones([...zones, { from: lastTo, to: lastTo, color: 'bg-green-500' }])
   }
 
   const removeZone = (index) => {
     setZones(zones.filter((_, i) => i !== index))
   }
 
+  const zonesOverlap = () => {
+    const sorted = [...zones].sort((a, b) => a.from - b.from)
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i].from < sorted[i - 1].to) return true
+    }
+    return false
+  }
+
   const handleCreate = async (e) => {
     e.preventDefault()
     if (!name || !model || !device || !unit) return
+    if (zonesOverlap()) {
+      setError('As faixas não podem se sobrepor')
+      return
+    }
     try {
       setLoading(true)
       setError('')

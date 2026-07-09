@@ -138,22 +138,38 @@ export default function EditSensorModal({ sensor, onClose, onUpdated }) {
   )
 
   const updateZone = (index, updated) => {
+    if (updated.from < min) updated.from = min
+    if (updated.to > max) updated.to = max
+    if (updated.from > updated.to) updated.from = updated.to
     const next = [...zones]
     next[index] = updated
     setZones(next)
   }
 
   const addZone = () => {
-    setZones([...zones, { from: 0, to: 0, color: 'bg-green-500' }])
+    const lastTo = zones.length > 0 ? zones[zones.length - 1].to : min
+    setZones([...zones, { from: lastTo, to: lastTo, color: 'bg-green-500' }])
   }
 
   const removeZone = (index) => {
     setZones(zones.filter((_, i) => i !== index))
   }
 
+  const zonesOverlap = () => {
+    const sorted = [...zones].sort((a, b) => a.from - b.from)
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i].from < sorted[i - 1].to) return true
+    }
+    return false
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!name || !model) return
+    if (zonesOverlap()) {
+      setError('As faixas não podem se sobrepor')
+      return
+    }
     try {
       setLoading(true)
       setError('')

@@ -8,11 +8,16 @@ import {
   Info,
 } from 'lucide-react'
 import GoldPanel from '../components/GoldPanel'
-import LineChart from '../components/LineChart'
+import ReadingBar from '../components/ReadingBar'
+import DashboardChart from '../components/DashboardChart'
 import { getMachines } from '../services/machines'
 import { getSensors } from '../services/sensors'
 import { getActuators } from '../services/actuators'
-import { getDashboardReadings, getPlotData } from '../services/registry'
+import { getDashboardData } from '../services/registry'
+
+function fmt(v) {
+  return Number(v).toFixed(2)
+}
 
 function timeAgo(timestamp) {
   if (!timestamp) return ''
@@ -32,12 +37,29 @@ function getSeverity(reading) {
   return 'warning'
 }
 
-function SensorBar({ sensor, onClick }) {
-  const pct = sensor.max > sensor.min
-    ? Math.min(Math.max(((sensor.value - sensor.min) / (sensor.max - sensor.min)) * 100, 0), 100)
-    : 50
+function formatPlotForChart(plot) {
+  if (!plot.readsAggByHour || plot.readsAggByHour.length === 0) return null
+
+  const data = plot.readsAggByHour.map((point) => {
+    const d = new Date(point.timestamp)
+    const day = d.getDate().toString().padStart(2, '0')
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const hour = d.getHours().toString().padStart(2, '0')
+    return {
+      label: `${day}/${month} ${hour}h`,
+      avg: Math.round(point.avgHour * 100) / 100,
+      max: Math.round(point.maxHour * 100) / 100,
+    }
+  })
+
+  const step = Math.max(1, Math.floor(data.length / 12))
+  return data.filter((_, i) => i % step === 0 || i === data.length - 1)
+}
+
+function SensorBar({ sensor, sensorName, sensorData, onClick }) {
   const severity = getSeverity(sensor)
-  const barColor = severity === 'critical' ? '#ef4444' : '#d97706'
+  const unit = sensorData?.unit || ''
+  const activationRanges = sensorData?.activationRanges || []
 
   return (
     <div
@@ -47,26 +69,27 @@ function SensorBar({ sensor, onClick }) {
       <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
         severity === 'critical' ? 'bg-red-500' : 'bg-amber-600'
       }`} />
-      <div className="min-w-[140px]">
-        <p className="text-sm font-semibold text-navy-900">{sensor.sensorId.slice(0, 8)}...</p>
+      <div className="min-w-[100px]">
+        <p className="text-sm font-semibold text-navy-900">{sensorName || sensor.sensorId.slice(0, 8) + '...'}</p>
         <p className="text-xs text-gray-400">{sensor.range?.name || 'Sem faixa'}</p>
       </div>
       <div className="flex-1 mx-2">
-        <div className="flex items-center justify-between text-[10px] text-gray-400 mb-0.5">
-          <span>{sensor.value} / max {sensor.max}</span>
-        </div>
-        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, backgroundColor: barColor }}
-          />
-        </div>
-        <p className="text-[10px] text-gray-400 mt-0.5">{timeAgo(sensor.timestamp)}</p>
+        <ReadingBar
+          value={sensor.value}
+          min={sensor.min}
+          max={sensor.max}
+          unit={unit}
+          ago={(() => {
+            if (!sensor.timestamp) return undefined
+            return Math.floor((Date.now() - new Date(sensor.timestamp).getTime()) / 60000)
+          })()}
+          activationRanges={activationRanges}
+        />
       </div>
       <span className={`text-2xl font-bold shrink-0 ${
         severity === 'critical' ? 'text-red-500' : 'text-amber-600'
       }`}>
-        {sensor.value}
+        {fmt(sensor.value)}{unit}
       </span>
     </div>
   )
@@ -105,6 +128,7 @@ export default function Dashboard() {
   const [sensors, setSensors] = useState(null)
   const [actuators, setActuators] = useState(null)
   const [dashboardReadings, setDashboardReadings] = useState([])
+  const [plots, setPlots] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -113,28 +137,42 @@ export default function Dashboard() {
         getMachines(),
         getSensors(),
         getActuators(),
-        getDashboardReadings(),
+        getDashboardData(),
       ])
       if (results[0].status === 'fulfilled') setDevices(results[0].value)
       if (results[1].status === 'fulfilled') setSensors(results[1].value)
       if (results[2].status === 'fulfilled') setActuators(results[2].value)
-      if (results[3].status === 'fulfilled' && results[3].value) setDashboardReadings(results[3].value)
+      if (results[3].status === 'fulfilled' && results[3].value) {
+        setDashboardReadings(results[3].value.notifications)
+        setPlots(results[3].value.plots)
+      }
       setLoading(false)
     }
     fetchData()
   }, [])
+
+  const sensorNameMap = {}
+  const sensorDataMap = {}
+  if (sensors) {
+    for (const s of sensors) {
+      sensorNameMap[s.sensorId] = s.sensorName
+      sensorDataMap[s.sensorId] = s
+    }
+  }
 
   const sensoresAtencao = dashboardReadings.filter((r) => {
     const severity = getSeverity(r)
     return severity !== 'ok'
   })
 
+  const chartsToShow = plots.slice(0, 4)
+
   const alertas = sensoresAtencao.map((r) => {
     const severity = getSeverity(r)
     return {
       icon: severity === 'critical' ? 'critical' : 'warning',
-      message: `Sensor ${r.sensorId.slice(0, 8)}... — valor ${r.value} (${r.range?.name || 'fora de faixa'})`,
-      detail: `${timeAgo(r.timestamp)} · Faixa ${r.min}–${r.max}`,
+      message: `Sensor ${sensorNameMap[r.sensorId] || r.sensorId.slice(0, 8) + '...'} — valor ${fmt(r.value)} (${r.range?.name || 'fora de faixa'})`,
+      detail: `${timeAgo(r.timestamp)} · Faixa ${fmt(r.min)}–${fmt(r.max)}`,
       linkTo: '/sensores',
     }
   })
@@ -148,7 +186,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] px-5 py-5">
           <div className="flex items-center gap-2">
@@ -229,7 +266,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Sensores em Atenção + Alertas Recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GoldPanel
           title="Sensores em Atenção"
@@ -240,7 +276,7 @@ export default function Dashboard() {
           {sensoresAtencao.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {sensoresAtencao.map((sensor, i) => (
-                <SensorBar key={i} sensor={sensor} onClick={() => navigate('/sensores')} />
+                <SensorBar key={i} sensor={sensor} sensorName={sensorNameMap[sensor.sensorId]} sensorData={sensorDataMap[sensor.sensorId]} onClick={() => navigate(`/leituras?sensorId=${sensor.sensorId}`)} />
               ))}
             </div>
           ) : (
@@ -267,6 +303,26 @@ export default function Dashboard() {
           )}
         </GoldPanel>
       </div>
+
+      {chartsToShow.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {chartsToShow.map((plot, i) => {
+            const chartData = formatPlotForChart(plot)
+            if (!chartData) return null
+
+            const sensorLabel = `Sensor ${plot._id}`
+
+            return (
+              <DashboardChart
+                key={i}
+                title={`${sensorLabel} — 7 dias`}
+                data={chartData}
+                height={220}
+              />
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
