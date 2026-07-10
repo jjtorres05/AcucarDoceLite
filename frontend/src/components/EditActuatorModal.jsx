@@ -1,33 +1,52 @@
 import { useState, useEffect } from 'react'
-import { X, Save, CircleDot, Info, Cpu, Activity } from 'lucide-react'
+import { X, Save, CircleDot, Info, SatelliteDish } from 'lucide-react'
 import Button from './Button'
 import Input from './Input'
 import CustomSelect from './CustomSelect'
 import { updateActuator } from '../services/actuators'
-import { getMachines } from '../services/machines'
 import { getSensors } from '../services/sensors'
 
 export default function EditActuatorModal({ actuator, onClose, onUpdated }) {
-  const [machines, setMachines] = useState([])
   const [sensors, setSensors] = useState([])
   const [name, setName] = useState(actuator.actuatorName)
   const [model, setModel] = useState(actuator.actuatorModel)
   const [active, setActive] = useState(actuator.actuatorStatus)
+  const [sensor, setSensor] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getMachines().then(setMachines).catch(() => {})
-    getSensors().then(setSensors).catch(() => {})
+    getSensors().then((data) => {
+      setSensors(data)
+      if (actuator.sensorName) {
+        const match = data.find(s => s.sensorName === actuator.sensorName)
+        if (match) setSensor(match.sensorId)
+      }
+    }).catch(() => {})
   }, [])
+
+  const sensorOptions = [
+    { value: '', label: 'Nenhum', sub: 'Remover vínculo', icon: <X size={14} className="text-gray-400" />, iconBg: 'bg-gray-100' },
+    ...sensors.map(s => ({
+      value: s.sensorId,
+      label: s.sensorName,
+      sub: `${s.sensorModel} · ${s.machineName}`,
+      icon: <SatelliteDish size={14} className="text-blue-500" />,
+      iconBg: 'bg-blue-50',
+      badge: s.sensorStatus ? 'Ativo' : 'Inativo',
+      badgeClass: s.sensorStatus ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
+    }))
+  ]
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name || !model) return
+    if (!name.trim() || !model.trim()) return
     try {
       setLoading(true)
       setError('')
-      await updateActuator(actuator.actuatorId, { name, model, active })
+      const body = { name, model, active }
+      if (sensor) body.sensorId = sensor
+      await updateActuator(actuator.actuatorId, body)
       onUpdated?.()
       onClose()
     } catch (err) {
@@ -77,12 +96,14 @@ export default function EditActuatorModal({ actuator, onClose, onUpdated }) {
             <span className="ml-2 text-sm text-gray-600">{active ? 'Ativo' : 'Inativo'}</span>
           </div>
 
-          <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-            <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-blue-600">
-              Para alterar o dispositivo ou sensor vinculado, exclua e crie um novo atuador.
-            </p>
-          </div>
+          <CustomSelect
+            label="Sensor de controle"
+            placeholder="Selecionar um sensor (opcional)"
+            value={sensor}
+            onChange={setSensor}
+            options={sensorOptions}
+            hint="Sensor vinculado a este atuador."
+          />
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 

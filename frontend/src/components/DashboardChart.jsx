@@ -26,14 +26,10 @@ ChartJS.register(
 export default function DashboardChart({ data, title, height = 220 }) {
   const labels = data.map((d) => d.label)
   const avgValues = data.map((d) => d.avg)
-  const maxValues = data.map((d) => d.max)
-
-  const avgOfAll = avgValues.reduce((a, b) => a + b, 0) / avgValues.length
-  const stdDev = Math.sqrt(avgValues.reduce((s, v) => s + (v - avgOfAll) ** 2, 0) / avgValues.length)
-  const criticalThreshold = avgOfAll + stdDev * 1.5
-
-  const criticalPoints = maxValues.map((v) => (v >= criticalThreshold ? v : null))
-  const hasCritical = criticalPoints.some((v) => v !== null)
+  const criticalValues = data.map((d) => d.critical)
+  const warningValues = data.map((d) => d.warning)
+  const hasCritical = criticalValues.some((v) => v !== null)
+  const hasWarning = warningValues.some((v) => v !== null)
 
   const datasets = [
     {
@@ -47,26 +43,43 @@ export default function DashboardChart({ data, title, height = 220 }) {
       pointBackgroundColor: '#1e293b',
       tension: 0.3,
       fill: false,
-      order: 1,
+      order: 2,
     },
   ]
 
   if (hasCritical) {
     datasets.push({
-      label: 'Pico crítico',
-      data: maxValues,
-      borderColor: '#ef444440',
+      label: 'Crítico',
+      data: criticalValues,
+      borderColor: 'transparent',
       backgroundColor: '#ef4444',
-      borderWidth: 1.5,
-      borderDash: [4, 3],
-      pointRadius: maxValues.map((v) => (v >= criticalThreshold ? 5 : 0)),
-      pointHoverRadius: maxValues.map((v) => (v >= criticalThreshold ? 7 : 0)),
+      borderWidth: 0,
+      pointRadius: criticalValues.map((v) => (v !== null ? 5 : 0)),
+      pointHoverRadius: criticalValues.map((v) => (v !== null ? 7 : 0)),
       pointBackgroundColor: '#ef4444',
       pointBorderColor: '#fff',
       pointBorderWidth: 2,
-      tension: 0.3,
+      showLine: false,
       fill: false,
       order: 0,
+    })
+  }
+
+  if (hasWarning) {
+    datasets.push({
+      label: 'Precaução',
+      data: warningValues,
+      borderColor: 'transparent',
+      backgroundColor: '#f59e0b',
+      borderWidth: 0,
+      pointRadius: warningValues.map((v) => (v !== null ? 5 : 0)),
+      pointHoverRadius: warningValues.map((v) => (v !== null ? 7 : 0)),
+      pointBackgroundColor: '#f59e0b',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      showLine: false,
+      fill: false,
+      order: 1,
     })
   }
 
@@ -97,7 +110,10 @@ export default function DashboardChart({ data, title, height = 220 }) {
         padding: 10,
         cornerRadius: 8,
         callbacks: {
-          label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}`,
+          label: (ctx) => {
+            if (ctx.raw === null) return null
+            return `${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}`
+          },
         },
       },
     },
@@ -109,7 +125,7 @@ export default function DashboardChart({ data, title, height = 220 }) {
           color: '#9ca3af',
           maxRotation: 0,
           autoSkip: true,
-          maxTicksLimit: 8,
+          maxTicksLimit: 14,
         },
       },
       y: {
@@ -134,6 +150,7 @@ export default function DashboardChart({ data, title, height = 220 }) {
       <div className="pt-3" style={{ height }}>
         <Line data={chartData} options={options} />
       </div>
+      <p className="text-[10px] text-gray-400 text-right mt-1">Pontos mostrados a cada 6h</p>
     </GoldPanel>
   )
 }

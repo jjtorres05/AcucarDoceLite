@@ -15,7 +15,7 @@ export default function NewDeviceModal({ onClose, onCreated }) {
 
   const handleCreate = async (e) => {
     e.preventDefault()
-    if (!name || !model) return
+    if (!name.trim() || !model.trim()) return
     try {
       setLoading(true)
       setError('')

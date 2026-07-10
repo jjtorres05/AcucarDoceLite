@@ -44,7 +44,7 @@ export default function NewActuatorModal({ onClose, onCreated }) {
 
   const handleCreate = async (e) => {
     e.preventDefault()
-    if (!name || !model || !device) return
+    if (!name.trim() || !model.trim() || !device) return
     try {
       setLoading(true)
       setError('')

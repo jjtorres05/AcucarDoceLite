@@ -18,7 +18,7 @@ export default function EditDeviceModal({ device, onClose, onUpdated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name || !model) return
+    if (!name.trim() || !model.trim()) return
     try {
       setLoading(true)
       setError('')

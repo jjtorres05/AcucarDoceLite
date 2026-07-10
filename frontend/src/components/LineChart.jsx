@@ -23,7 +23,7 @@ ChartJS.register(
   Filler
 )
 
-export default function LineChart({ data, series, title, height = 200 }) {
+export default function LineChart({ data, series, title, height = 200, subtitle, maxTicksLimit = 10 }) {
   const seriesKeys = Object.keys(series)
   const labels = data.map((d) => d.label)
 
@@ -93,7 +93,7 @@ export default function LineChart({ data, series, title, height = 200 }) {
           color: '#9ca3af',
           maxRotation: 0,
           autoSkip: true,
-          maxTicksLimit: 10,
+          maxTicksLimit,
         },
       },
       y: {
@@ -114,6 +114,7 @@ export default function LineChart({ data, series, title, height = 200 }) {
       <div className="pt-3" style={{ height }}>
         <Line data={chartData} options={options} />
       </div>
+      {subtitle && <p className="text-[10px] text-gray-400 text-right mt-1">{subtitle}</p>}
     </GoldPanel>
   )
 }

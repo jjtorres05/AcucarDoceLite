@@ -40,7 +40,7 @@ function formatChartData(sensorData, granularity) {
       avgMinusStd: Math.round((avg - stdDev) * 100) / 100,
     }
   })
-  const maxPoints = granularity === 'minute' ? 30 : 14
+  const maxPoints = granularity === 'minute' ? 30 : 42
   const step = Math.max(1, Math.floor(raw.length / maxPoints))
   return raw.filter((_, i) => i % step === 0 || i === raw.length - 1)
 }
@@ -360,6 +360,8 @@ export default function Leituras() {
                 avgMinusStd: { color: '#8b5cf6', label: 'Média − DP', pointOnly: true },
               }}
               height={280}
+              maxTicksLimit={interval === '24h' ? 24 : interval === '7d' ? 17 : 20}
+              subtitle={null}
             />
           ) : (
             <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6 text-center">

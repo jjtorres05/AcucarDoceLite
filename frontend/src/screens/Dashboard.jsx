@@ -33,11 +33,24 @@ function getSeverity(reading) {
   if (!reading.range) return 'critical'
   const name = reading.range.name?.toLowerCase() || ''
   if (name === 'normal') return 'ok'
-  if (name.includes('crit') || name.includes('danger') || name.includes('perigo')) return 'critical'
-  return 'warning'
+  if (name.includes('precau')) return 'warning'
+  return 'critical'
 }
 
-function formatPlotForChart(plotData) {
+function getRangeSeverity(value, ranges) {
+  if (!ranges || ranges.length === 0) return null
+  for (const r of ranges) {
+    if (value >= r.lowerBound && value <= r.upperBound) {
+      const name = r.name?.toLowerCase() || ''
+      if (name === 'normal') return null
+      if (name.includes('precau')) return 'warning'
+      return 'critical'
+    }
+  }
+  return null
+}
+
+function formatPlotForChart(plotData, ranges) {
   if (!plotData || plotData.length === 0) return null
   const raw = plotData[0]
   if (!raw?.readsAggByHour || raw.readsAggByHour.length === 0) return null
@@ -47,14 +60,33 @@ function formatPlotForChart(plotData) {
     const day = d.getDate().toString().padStart(2, '0')
     const month = (d.getMonth() + 1).toString().padStart(2, '0')
     const hour = d.getHours().toString().padStart(2, '0')
+    const avg = Math.round(point.avgHour * 100) / 100
+    const min = Math.round(point.minHour * 100) / 100
+    const max = Math.round(point.maxHour * 100) / 100
+
+    const avgSev = getRangeSeverity(avg, ranges)
+    const minSev = getRangeSeverity(min, ranges)
+    const maxSev = getRangeSeverity(max, ranges)
+
+    let critical = null
+    let warning = null
+    if (avgSev === 'critical') critical = avg
+    else if (maxSev === 'critical') critical = max
+    else if (minSev === 'critical') critical = min
+
+    if (avgSev === 'warning') warning = avg
+    else if (maxSev === 'warning') warning = max
+    else if (minSev === 'warning') warning = min
+
     return {
       label: `${day}/${month} ${hour}h`,
-      avg: Math.round(point.avgHour * 100) / 100,
-      max: Math.round(point.maxHour * 100) / 100,
+      avg,
+      critical,
+      warning,
     }
   })
 
-  const step = Math.max(1, Math.floor(data.length / 12))
+  const step = Math.max(1, Math.floor(data.length / 28))
   return data.filter((_, i) => i % step === 0 || i === data.length - 1)
 }
 
@@ -149,7 +181,7 @@ export default function Dashboard() {
         const alertIds = results[3].value.alertSensors || []
         if (alertIds.length > 0) {
           const plotResults = await Promise.allSettled(
-            alertIds.slice(0, 4).map(id => getPlotData(id).then(data => ({ sensorId: id, data })))
+            alertIds.slice(0, 4).map(id => getPlotData(id).then(({ ranges, pointsToPlot }) => ({ sensorId: id, ranges, data: pointsToPlot })))
           )
           const loaded = plotResults
             .filter(r => r.status === 'fulfilled' && r.value.data?.length > 0)
@@ -316,7 +348,7 @@ export default function Dashboard() {
       {alertPlots.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {alertPlots.map((plot, i) => {
-            const chartData = formatPlotForChart(plot.data)
+            const chartData = formatPlotForChart(plot.data, plot.ranges)
             if (!chartData) return null
 
             const sensorLabel = sensorNameMap[plot.sensorId] || plot.sensorId.slice(0, 8) + '...'

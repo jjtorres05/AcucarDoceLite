@@ -344,7 +344,7 @@ export default function Sensors() {
                     activationRanges={sensor.activationRanges}
                   />
                 ) : (
-                  <span className="text-xs text-gray-400">Sem leitura</span>
+                  <ReadingBar unit={sensor.unit || ''} />
                 )}
               </DataCell>
               <DataCell center>

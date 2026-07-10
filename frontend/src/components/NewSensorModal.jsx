@@ -69,7 +69,7 @@ function AlertBar({ min, max, zones }) {
     const segTo = allBounds[i + 1]
     const width = ((segTo - segFrom) / range) * 100
 
-    let color = 'bg-red-500'
+    let color = zones.length === 0 ? 'bg-gray-300' : 'bg-red-500'
     for (const z of zones) {
       if (segFrom >= z.from && segTo <= z.to) {
         color = z.color
@@ -219,7 +219,7 @@ export default function NewSensorModal({ onClose, onCreated }) {
 
   const handleCreate = async (e) => {
     e.preventDefault()
-    if (!name || !model || !device || !unit) return
+    if (!name.trim() || !model.trim() || !device || !unit.trim()) return
     if (zones.length > 0 && zonesOverlap()) {
       setError('As faixas não podem se sobrepor')
       return
@@ -366,7 +366,7 @@ export default function NewSensorModal({ onClose, onCreated }) {
                 key={i}
                 zone={zone}
                 onChange={(updated) => updateZone(i, updated)}
-                onRemove={zones.length > 1 ? () => removeZone(i) : null}
+                onRemove={() => removeZone(i)}
               />
             ))}
           </div>

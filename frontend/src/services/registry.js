@@ -14,7 +14,7 @@ export async function getDashboardReadings() {
 export async function getPlotData(sensorId) {
   const companyId = localStorage.getItem('companyId')
   const data = await api(`/refreshOneInitialPlot?sensorId=${sensorId}&companyId=${companyId}`)
-  return data.data
+  return { ranges: data.ranges || [], pointsToPlot: data.pointsToPlot || [] }
 }
 
 export async function getSensorDashboard(sensorId, startDate, endDate) {
