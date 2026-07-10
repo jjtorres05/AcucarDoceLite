@@ -4,7 +4,7 @@ import { ChevronDown } from 'lucide-react'
 import Logo from '../components/Logo'
 import Input from '../components/Input'
 import CompanyCard from '../components/CompanyCard'
-import { getCompanies } from '../services/auth'
+import { getCompanies, isInternalAdmin } from '../services/auth'
 
 export default function SelectCompany({ onLogin }) {
   const [search, setSearch] = useState('')
@@ -26,7 +26,7 @@ export default function SelectCompany({ onLogin }) {
   }, [])
 
   const getCompanyData = (item) => item.company || item
-  const getRole = (item) => item.roleCompany ?? 0
+  const getRole = (item) => isInternalAdmin() ? 1 : (item.roleCompany ?? 0)
 
   const filtered = companies.filter((c) =>
     getCompanyData(c).name?.toLowerCase().includes(search.toLowerCase())

@@ -21,6 +21,15 @@ export function logout(){
     localStorage.removeItem('roleCompany')
 }
 
+export function isInternalAdmin(){
+    try {
+        const token = localStorage.getItem('token')
+        if (!token) return false
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        return payload.role === 2
+    } catch { return false }
+}
+
 export function isAdmin(){
     return localStorage.getItem('roleCompany') === '1'
 }

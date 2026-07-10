@@ -4,7 +4,7 @@ import Logo from '../components/Logo'
 import Input from '../components/Input'
 import PasswordInput from '../components/PasswordInput'
 import Button from '../components/Button'
-import { login, getCompanies } from '../services/auth'
+import { login, getCompanies, isInternalAdmin } from '../services/auth'
 import iotIllustration from '../assets/15 junio.png'
 
 export default function Login({ onLogin }) {
@@ -25,7 +25,7 @@ export default function Login({ onLogin }) {
 
       if (companies.length === 1) {
         const c = companies[0].company || companies[0]
-        onLogin(c.id, c.name, companies[0].roleCompany ?? 0)
+        onLogin(c.id, c.name, isInternalAdmin() ? 1 : (companies[0].roleCompany ?? 0))
         navigate('/dashboard')
       } else {
         navigate('/empresas', { state: { companies } })
