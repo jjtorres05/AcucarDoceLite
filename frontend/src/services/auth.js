@@ -4,8 +4,9 @@ export async function login(email, password) {
         method: 'POST',
         body: JSON.stringify({email, password}),
     })
+    if (!data.Bearer) throw new Error('Token não recebido do servidor')
     localStorage.setItem('token', data.Bearer)
-    return data   
+    return data
 }
 
 export async function getCompanies(){
