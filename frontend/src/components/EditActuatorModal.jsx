@@ -44,8 +44,7 @@ export default function EditActuatorModal({ actuator, onClose, onUpdated }) {
     try {
       setLoading(true)
       setError('')
-      const body = { name, model, active }
-      if (sensor) body.sensorId = sensor
+      const body = { name, model, active, sensorId: sensor || null }
       await updateActuator(actuator.actuatorId, body)
       onUpdated?.()
       onClose()

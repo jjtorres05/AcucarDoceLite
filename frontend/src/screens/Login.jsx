@@ -31,7 +31,7 @@ export default function Login({ onLogin }) {
         navigate('/empresas', { state: { companies } })
       }
     } catch (err) {
-      setError(err.error?.message || 'Email ou senha incorretos')
+      setError(err.message || 'Email ou senha incorretos')
     } finally {
       setLoading(false)
     }

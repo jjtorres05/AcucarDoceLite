@@ -62,7 +62,7 @@ function SensorSelector({ sensors, selectedId, onSelect }) {
   const filtered = sensors.filter((s) =>
     s.sensorName.toLowerCase().includes(search.toLowerCase()) ||
     (s.sensorType || '').toLowerCase().includes(search.toLowerCase()) ||
-    s.machineName.toLowerCase().includes(search.toLowerCase())
+    (s.machineName || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (

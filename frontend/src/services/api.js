@@ -18,7 +18,8 @@ export async function api(endpoint,options= {}) {
         }
         throw new Error('Acesso não permitido')
     }
-    const data = await response.json()
+    const text = await response.text()
+    const data = text ? JSON.parse(text) : {}
 
     if(!response.ok){
         let message = data.msg || data.message || data.error || 'Erro desconhecido'
