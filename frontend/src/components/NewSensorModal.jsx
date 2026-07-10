@@ -232,7 +232,7 @@ export default function NewSensorModal({ onClose, onCreated }) {
         lowerBound: Number(z.from) || 0,
         upperBound: Number(z.to) || 0,
       }))
-      await createSensor({ name, model, unit, sType: type || 'outro', machineId: device, ranges })
+      await createSensor({ name, model, unit, sType: type || 'outro', machineId: device, ranges, minRange: Number(min) || 0, maxRange: Number(max) || 100 })
       onCreated?.()
       onClose()
     } catch (err) {

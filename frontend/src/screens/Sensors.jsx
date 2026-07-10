@@ -327,25 +327,14 @@ export default function Sensors() {
                 <StatusBadge status={sensor.sensorStatus ? 'Ativo' : 'Inativo'} />
               </DataCell>
               <DataCell>
-                {reading ? (
-                  <ReadingBar
-                    value={reading.value}
-                    min={reading.min}
-                    max={reading.max}
-                    unit={sensor.unit || ''}
-                    ago={getMinutesAgo(reading.timestamp)}
-                    activationRanges={sensor.activationRanges}
-                  />
-                ) : sensor.activationRanges?.length > 0 ? (
-                  <ReadingBar
-                    min={Math.min(...sensor.activationRanges.map(r => r.lowerBound))}
-                    max={Math.max(...sensor.activationRanges.map(r => r.upperBound))}
-                    unit={sensor.unit || ''}
-                    activationRanges={sensor.activationRanges}
-                  />
-                ) : (
-                  <ReadingBar unit={sensor.unit || ''} />
-                )}
+                <ReadingBar
+                  value={reading?.value}
+                  min={sensor.sensorMinRange ?? 0}
+                  max={sensor.sensorMaxRange ?? 100}
+                  unit={sensor.unit || ''}
+                  ago={reading ? getMinutesAgo(reading.timestamp) : undefined}
+                  activationRanges={sensor.activationRanges}
+                />
               </DataCell>
               <DataCell center>
                 <div className="flex items-center justify-center gap-1">

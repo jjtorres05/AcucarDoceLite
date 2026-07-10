@@ -150,7 +150,7 @@ export default function DashboardChart({ data, title, height = 220 }) {
       <div className="pt-3" style={{ height }}>
         <Line data={chartData} options={options} />
       </div>
-      <p className="text-[10px] text-gray-400 text-right mt-1">Pontos mostrados a cada 6h</p>
+      <p className="text-[10px] text-gray-400 text-right mt-1">Pontos mostrados a cada 4h</p>
     </GoldPanel>
   )
 }

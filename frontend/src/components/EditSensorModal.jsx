@@ -121,12 +121,9 @@ export default function EditSensorModal({ sensor, onClose, onUpdated }) {
   const [error, setError] = useState('')
 
   const existingRanges = sensor.activationRanges || []
-  const allBounds = existingRanges.flatMap(r => [r.lowerBound, r.upperBound])
-  const initialMin = allBounds.length > 0 ? Math.min(...allBounds) : 0
-  const initialMax = allBounds.length > 0 ? Math.max(...allBounds) : 100
 
-  const [min, setMin] = useState(initialMin)
-  const [max, setMax] = useState(initialMax)
+  const [min, setMin] = useState(sensor.sensorMinRange ?? 0)
+  const [max, setMax] = useState(sensor.sensorMaxRange ?? 100)
   const [zones, setZones] = useState(
     existingRanges.length > 0
       ? existingRanges.map(r => ({
@@ -180,7 +177,7 @@ export default function EditSensorModal({ sensor, onClose, onUpdated }) {
         upperBound: z.to,
       }))
 
-      await updateSensor(sensor.sensorId, { name, model, active })
+      await updateSensor(sensor.sensorId, { name, model, active, minRange: Number(min), maxRange: Number(max) })
       await updateSensorRanges(sensor.sensorId, ranges, existingRanges)
       onUpdated?.()
       onClose()

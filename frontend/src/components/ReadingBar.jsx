@@ -21,8 +21,8 @@ export default function ReadingBar({ value, min = 0, max, unit, ago, activationR
   const range = max - min
   const pct = hasValue && range > 0 ? Math.min(Math.max(((value - min) / range) * 100, 0), 100) : 50
 
-  const barMin = activationRanges?.length > 0 ? min : 0
-  const barMax = activationRanges?.length > 0 ? max : 100
+  const barMin = min
+  const barMax = max ?? 100
   const barRange = barMax - barMin || 1
 
   const buildSegments = () => {

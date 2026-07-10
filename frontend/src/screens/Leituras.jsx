@@ -198,11 +198,15 @@ export default function Leituras() {
   const [customEnd, setCustomEnd] = useState('')
 
   useEffect(() => {
+    if (preselectedId) setSelectedSensorId(preselectedId)
+  }, [preselectedId])
+
+  useEffect(() => {
     Promise.allSettled([getSensors(), getActuators()])
       .then(([sensorsRes, actuatorsRes]) => {
         if (sensorsRes.status === 'fulfilled') {
           setSensors(sensorsRes.value)
-          if (!selectedSensorId && sensorsRes.value.length > 0) {
+          if (!preselectedId && sensorsRes.value.length > 0) {
             setSelectedSensorId(sensorsRes.value[0].sensorId)
           }
         }
